@@ -125,20 +125,18 @@ Instead of the simple average, we use the _weighted_ average across all pixels, 
 
 ### Attention
 
-Intuitively, what would you need to estimate the importance of different parts of the image?
+Intuitively, how would you estimate the importance of a certain part of an image?
 
-You would need to know how much of the sequence you have generated, so you could look at the image and decide what needs describing next. For example, you know that you have mentioned `a man` so far, but you look at the image and notice the aforementioned man is `holding` `a` `football`.
+You would need to be aware of the sequence you have generated _so far_, so you can look at the image and decide what needs describing next. For example, after you mention `a man`, the logical thing to do is to declare that he is `holding` `a` `football`.
 
-This is exactly what the attention mechanism does - it considers the sequence generated thus far, looks at the image, and _attends_ to the part of it that needs describing next.
+This is exactly what the Attention mechanism does - it considers the sequence generated thus far, and _attends_ to the part of the image that needs describing next.
 
 ![Attention](./img/att.png)
 <p align="center">
   *Attention*
 </p>
 
-We will use the _soft_ Attention, where the weights of the pixels add up to 1. You could interpret this as finding the probability that a certain pixel is _the_ important part of the image to generate the next word.
-
-(Funny story - when I was a kid growing up in India doing drills at school, the PE teacher would 
+We will use _soft_ Attention, where the weights of the pixels add up to 1. You could interpret this as computing the probability that a certain pixel is _the_ important part of the image to generate the next word.
 
 ### Putting it all together
 
