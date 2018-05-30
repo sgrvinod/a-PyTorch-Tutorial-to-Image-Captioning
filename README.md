@@ -30,19 +30,19 @@ The most interesting thing about this model is it learns _where_ to look complet
 
 Here are some results of the code on _test_ images not seen during training or validation:
 
-
+---
 ![](./img/boats.png)
 
 Notice how the model is looking at the boats when it says `boats`, and the sand when it says `the` `beach`.
-
+---
 ![](./img/bikefence.png)
-
+---
 ![](./img/sheep.png)
-
+---
 ![](./img/babycake.png)
-
+---
 ![](./img/dogtie.png)
-
+---
 There are more examples at the [end of the tutorial]().
 
 # Concepts
