@@ -1,24 +1,18 @@
-# Hello
-
 This is a **PyTorch tutorial to Image Captioning**.
 
 This is part of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks, loss functions is assumed.
 
-Questions, suggestions, or corrections can be posted as under _Issues_.
+Questions, suggestions, or corrections can be posted as issues.
 
 # Contents
 
-This tutorial
-- states an [***Objective***](#objective)
-- enumerates key [***Concepts***](#concepts) you will learn that will be extendable to other models
-- presents a brief [***Overview***]() of the model
-- walks you through the [***Implementation***]() with
-  - particulars of the data
-  - commented code
-  - notes about interesting parts of the code
-- addresses [***Frequently Asked Questions***]() (which will be expanded over time)
+[***Objective***](https://github.com/sgrvinod/caption#objective)
+[***Concepts***](https://github.com/sgrvinod/caption#concepts) 
+[***Overview***](https://github.com/sgrvinod/caption#overview) 
+[***Implementation***](https://github.com/sgrvinod/caption#implementation)
+[***Frequently Asked Questions***](https://github.com/sgrvinod/caption#faqs)
 
 # Objective
 
