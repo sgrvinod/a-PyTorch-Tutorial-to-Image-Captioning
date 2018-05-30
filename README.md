@@ -20,21 +20,23 @@ Questions, suggestions, or corrections can be posted as issues.
 
 # Objective
 
-> To build a model that can generate a descriptive caption for an image we provide it. 
- 
-Moreover, this model should incorporate an _attention_ mechanism, whereby it concentrates on the relevant parts of the image as it generates a caption.
+**To build a model that can generate a descriptive caption for an image we provide it.**
 
-In the interest of keeping things simple, let's choose to implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is a suitable place to begin.
+In the interest of keeping things simple, let's choose to implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is still pretty darn amazing.
 
-The most interesting thing about this model is it learns _where_ to look completely on its own. As it generates captions, you can see the model's gaze shifting from object to object.
+This model learns _where_ to look. 
 
-Here are some results of the code on _test_ images not seen during training or validation:
+As you generate a caption, word by word, you can see the the model's gaze shifting across the image. 
+
+This is possible because of its _Attention_ mechanism, which allows it to focus on the part of the image most relevant to the word it is going to utter next. 
+
+Here are some captions generated on _test_ images not seen during training or validation:
 
 ---
 
 ![](./img/boats.png)
 
-Notice how the model is looking at the boats when it says `boats`, and the sand when it says `the` `beach`.
+Notice how the model is looking at the boats when it says `boats`, and the sand when it says `the beach`.
 
 ---
 
