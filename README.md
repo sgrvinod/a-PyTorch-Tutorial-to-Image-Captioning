@@ -1,6 +1,6 @@
 This is a **PyTorch tutorial to Image Captioning**.
 
-This is part of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
+This is the first of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks, loss functions is assumed.
 
@@ -20,7 +20,9 @@ Questions, suggestions, or corrections can be posted as issues.
 
 # Objective
 
-We want to build a model that can generate a descriptive caption for an image we provide it. Moreover, this model should incorporate an _attention_ mechanism, whereby it concentrates on the relevant parts of the image as it generates a caption.
+> To build a model that can generate a descriptive caption for an image we provide it. 
+ 
+Moreover, this model should incorporate an _attention_ mechanism, whereby it concentrates on the relevant parts of the image as it generates a caption.
 
 In the interest of keeping things simple, let's choose to implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is a suitable place to begin.
 
