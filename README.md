@@ -34,9 +34,11 @@ Here are some captions generated on _test_ images not seen during training or va
 
 ---
 
-![](./img/boats.png)
+![](./img/plane.png)
 
-Notice how the model is looking at the boats when it says `boats`, and the sand when it says `the beach`.
+---
+
+![](./img/boats.png)
 
 ---
 
@@ -58,66 +60,68 @@ Notice how the model is looking at the boats when it says `boats`, and the sand 
 
 There are more examples at the [end of the tutorial]().
 
+---
+
 # Concepts
 
-* **Image captioning**. You will learn the elements of captioning models, how they work, and how to implement them.
+* **Image captioning**. You will learn about the general structure of captioning models, how they work, and their implementation.
 
-* **Encoder-Decoder architecture**. Any model that generates a sequence will use an encoder to encode the input into a fixed form, and a decoder to decode it, word by word, into a sequence.
+* **Encoder-Decoder architecture**. Any model that generates sequences will use an Encoder to encode the input into a fixed form and a Decoder to decode it, word by word, into a sequence.
 
-* **Attention**. Ilya Sutskever, the research director at OpenAI, [has said](https://www.re-work.co/blog/deep-learning-ilya-sutskever-google-openai) attention will play a very important role in the future of deep learning. If you're not too sure what "attention" really means, just know for now that it's how our image captioning model will _pay attention_ to the important regions of the image. The cool part is the same attention mechanism you see used here is employed in other tasks, usually in sequence-to-sequence models like machine translation.
+* **Attention**. The use of Attention networks is widespread in deep learning, and with good reason. This is a way for a model to choose only those parts of the encoding that it thinks is relevant to the task at hand. The same mechanism you see employed here can be used in any model where the Encoder's output has multiple points in space or time. In image captioning, you consider some pixels more important than others. In sequence to sequence tasks like machine translation, you consider some words more important than others. 
 
-* **Transfer Learning** and fine-tuning. Transfer learning is when you use parts of another model that has already been trained on a different or similar task. You're transferring the knowledge that has been learned elsewhere to your current task. This is almost always better than training your model from scratch (i.e., knowing nothing). You can also fine-tune this second-hand knowledge to the task at hand if you wish to improve your overall performance.
+* **Transfer Learning**. This is when you borrow from an existing model by using parts of it in a new model. This is almost always better than training a new model from scratch (i.e., knowing nothing). As you will see, you can always fine-tune this second-hand knowledge to the specific task at hand. Using pretrained word embeddings is a dumb but valid example. For our image captioning problem, we will use a pretrained Encoder, and then fine-tune it as needed.
 
-* **Beam Search**. This is a much better way to construct the caption/sequence from the decoder's output than to just choose the words with the highest scores.
+* **Beam Search**. This is where you don't let your Decoder be lazy and simply choose the words with the _best_ score at each decode-step. 
 
 # Overview
 
-A broad overview of the model.
+In this section, I will present a broad overview of this model. I don't really get into the _minutiae_ here - feel free to skip to the implementation section and commented code for details.
 
 ### Encoder
 
-The encoder **encodes the input image with 3 color channels into a smaller image with _learned_ channels**.
+The Encoder **encodes the input image with 3 color channels into a smaller image with "learned" channels**.
 
-This smaller encoded image contains all the useful information we need to generate a caption. Think of it as a summary representation of the original image.
+This smaller encoded image is a summary representation of all that's useful in the original image.
 
-Since we want to encode images, we use **Convolutional Neural Networks (CNNs)**.
+Since we want to encode images, we use Convolutional Neural Networks (CNNs).
 
-But we don't need to train an encoder from scratch. Why? Because there are already CNNs trained to represent all that's useful in an image. For years, people have been building models that are extraordinarily good at classifying an image into one of a thousand categories. It stands to reason that these models capture the essence of an image very well.
+We don't need to train an encoder from scratch. Why? Because there are already CNNs trained to represent images. 
 
-I have chosen to use the **101 layered Residual Network trained on the ImageNet classification task**, which is already available in PyTorch. This is an example of __transfer learning__.
+For years, people have been building models that are extraordinarily good at classifying an image into one of a thousand categories. It stands to reason that these models capture the essence of an image very well.
+
+I have chosen to use the **101 layered Residual Network trained on the ImageNet classification task**, available in PyTorch. As stated earlier, this is an example of Transfer Learning. You have the option of fine-tuning it to improve performance.
 
 ![ResNet Encoder](./img/encoder.png)
 <p align="center">
   *ResNet-101 Encoder*
 </p>
 
-These models progressively create smaller and smaller representations of the original image, and each subsequent representation is more "learned" with a greater number of channels. The **final encoding produced by our ResNet-101 encoder has a size of 14x14 with 4096 channels**, i.e., a 4096x14x14 size tensor.
+These models progressively create smaller and smaller representations of the original image, and each subsequent representation is more "learned", with a greater number of channels. The final encoding produced by our ResNet-101 encoder has a size of 14x14 with 4096 channels, i.e., a `4096, 14, 14` size tensor.
 
-Feel free to experiment with other pretrained architectures. Modifications are necessary. Since the last layer or two of these models are linear layers coupled with Softmax activation for classification, we strip these away.
+I encourage you to experiment with other pre-trained architectures. The paper uses a VGGnet, also pretrained on ImageNet, but without fine-tuning. Either way, modifications are necessary. Since the last layer or two of these models are linear layers coupled with softmax activation for classification, we strip 'em away.
 
 ### Decoder
 
-The decoder's job is to **look at the encoded image and generate a caption word by word**.
+The Decoder's job is to look at the encoded image and generate a caption word by word.
 
-Since it is generating a sequence, it would need to be a **Recurrent Neural Network (RNN)**. We will use the LSTM flavor of RNNs.
+Since it's generating a sequence, it would need to be a Recurrent Neural Network (RNN). We will try the LSTM flavor.
 
-In a typical setting without Attention, you could take the simple average of the encoded image across all pixels. You could then feed this into a decoder LSTM, with or without a linear transformation, as its first hidden state and generate a caption word by word. Each predicted word is fed into the RNN to generate the next word.
+In a typical setting without Attention, you could simply average the encoded image across all pixels. You could then feed this, with or without a linear transformation, into the Decoder as its first hidden state and generate the caption. Each predicted word is used to generate the next word.
 
 ![Decoder without Attention](./img/decoder_no_att.png)
 <p align="center">
   *Decoding without Attention*
 </p>
 
-In a setting _with_ Attention, we want to look at _different_ parts of the image at different points in generating the sequence. For example, while generating the word `football` `in` `a` `man` `holds` `a` `football`, the decoder would know to _look_ at the hat part of the image. It's discarding the less useful parts of the image.
+In a setting _with_ Attention, we want the Decoder to be able to look at different parts of the image at different points in the sequence. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on the - you guessed it - football! 
 
 ![Decoding with Attention](./img/decoder_att.png)
 <p align="center">
   *Decoding with Attention*
 </p>
 
-We're using the _weighted_ average across all pixels, with the weights of the important pixels being higher. This weighted average of the image can be concatenated with the previously generated word at each step to generate the next word.
-
-How do we estimate the weights for each pixel? Enter the Attention mechanism...
+Instead of the simple average, we use the _weighted_ average across all pixels, with the weights of the important pixels being greater. This weighted representation of the image can be concatenated with the previously generated word at each step to generate the next word.
 
 ### Attention
 
@@ -133,6 +137,8 @@ This is exactly what the attention mechanism does - it considers the sequence ge
 </p>
 
 We will use the _soft_ Attention, where the weights of the pixels add up to 1. You could interpret this as finding the probability that a certain pixel is _the_ important part of the image to generate the next word.
+
+(Funny story - when I was a kid growing up in India doing drills at school, the PE teacher would 
 
 ### Putting it all together
 
