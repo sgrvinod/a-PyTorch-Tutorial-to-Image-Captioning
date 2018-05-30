@@ -9,9 +9,13 @@ Questions, suggestions, or corrections can be posted as issues.
 # Contents
 
 [***Objective***](https://github.com/sgrvinod/caption#objective)
+
 [***Concepts***](https://github.com/sgrvinod/caption#concepts) 
+
 [***Overview***](https://github.com/sgrvinod/caption#overview) 
+
 [***Implementation***](https://github.com/sgrvinod/caption#implementation)
+
 [***Frequently Asked Questions***](https://github.com/sgrvinod/caption#faqs)
 
 # Objective
