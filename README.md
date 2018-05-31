@@ -1,10 +1,12 @@
-This is a **PyTorch tutorial to Image Captioning**.
+This is a **[PyTorch](https://pytorch.org) Tutorial to Image Captioning**.
 
 This is the first of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
 
-Basic knowledge of PyTorch, convolutional and recurrent neural networks, loss functions is assumed.
+Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
 Questions, suggestions, or corrections can be posted as issues.
+
+I'm using `PyTorch 0.4` in `Python 3.6`.
 
 # Contents
 
@@ -93,59 +95,44 @@ For years, people have been building models that are extraordinarily good at cla
 I have chosen to use the **101 layered Residual Network trained on the ImageNet classification task**, available in PyTorch. As stated earlier, this is an example of Transfer Learning. You have the option of fine-tuning it to improve performance.
 
 ![ResNet Encoder](./img/encoder.png)
-<p align="center">
-  *ResNet-101 Encoder*
-</p>
 
 These models progressively create smaller and smaller representations of the original image, and each subsequent representation is more "learned", with a greater number of channels. The final encoding produced by our ResNet-101 encoder has a size of 14x14 with 4096 channels, i.e., a `4096, 14, 14` size tensor.
 
-I encourage you to experiment with other pre-trained architectures. The paper uses a VGGnet, also pretrained on ImageNet, but without fine-tuning. Either way, modifications are necessary. Since the last layer or two of these models are linear layers coupled with softmax activation for classification, we strip 'em away.
+I encourage you to experiment with other pre-trained architectures. The paper uses a VGGnet, also pretrained on ImageNet, but without fine-tuning. Either way, modifications are necessary. Since the last layer or two of these models are linear layers coupled with softmax activation for classification, we strip them away.
 
 ### Decoder
 
-The Decoder's job is to look at the encoded image and generate a caption word by word.
+The Decoder's job is to **look at the encoded image and generate a caption word by word**.
 
 Since it's generating a sequence, it would need to be a Recurrent Neural Network (RNN). We will use an LSTM.
 
 In a typical setting without Attention, you could simply average the encoded image across all pixels. You could then feed this, with or without a linear transformation, into the Decoder as its first hidden state and generate the caption. Each predicted word is used to generate the next word.
 
 ![Decoder without Attention](./img/decoder_no_att.png)
-<p align="center">
-  *Decoding without Attention*
-</p>
 
-In a setting _with_ Attention, we want the Decoder to be able to look at different parts of the image at different points in the sequence. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on the - you guessed it - football!
+In a setting _with_ Attention, we want the Decoder to be able to **look at different parts of the image at different points in the sequence**. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on the - you guessed it - football!
 
 ![Decoding with Attention](./img/decoder_att.png)
-<p align="center">
-  *Decoding with Attention*
-</p>
 
 Instead of the simple average, we use the _weighted_ average across all pixels, with the weights of the important pixels being greater. This weighted representation of the image can be concatenated with the previously generated word at each step to generate the next word.
 
 ### Attention
 
-The Attention network computes the weights.
+The Attention network **computes the weights**.
 
-Intuitively, how would you estimate the importance of a certain part of an image? You would need to be aware of the sequence you have generated _thus far_, so you can look at the image and decide what needs describing next. For example, after you mention `a man`, it is logiical to declare that he is `holding` `a` `football`.
+Intuitively, how would you estimate the importance of a certain part of an image? You would need to be aware of the sequence you have generated _thus far_, so you can look at the image and decide what needs describing next. For example, after you mention `a man`, it is logical to declare that he is `holding a football`.
 
 This is exactly what the Attention mechanism does - it considers the sequence generated thus far, and _attends_ to the part of the image that needs describing next.
 
 ![Attention](./img/att.png)
-<p align="center">
-  *Attention*
-</p>
 
-We will use _soft_ Attention, where the weights of the pixels add up to 1. You could interpret this as computing the probability that a pixel is _the_ place to look to generate the next word.
+We will use _soft_ Attention, where the weights of the pixels add up to 1. You could interpret this as computing the **probability that a pixel is _the_ place to look to generate the next word**.
 
 ### Putting it all together
 
 It might be clear by now what our combined network looks like.
 
 ![Putting it all together](./img/model.png)
-<p align="center">
-  *Encoder + Attention + Decoder*
-</p>
 
 - Once the Encoder generates the encoded image, we transform the encoding to create the initial hidden state `h` (and cell state `C`) for the LSTM Decoder.
 - At each decode step,
@@ -156,11 +143,11 @@ It might be clear by now what our combined network looks like.
 
 We use a linear layer to transform the Decoder's output into a score for each word in the vocabulary.
 
-The straightforward - and quite greedy - option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. It's not just the first word - each word in the sequence has consequences for the ones that succeed it.
+The straightforward - and quite greedy - option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. And it's not just the first word - each word in the sequence has consequences for the ones that succeed it.
 
 It might very well happen that if you'd chosen the _third_ best word at that first step, and the _second_ best word at the second step, and so on... _that_ would be the best sequence you could generate.
 
-It would be best if we could somehow _not_ decide until we've finished decoding completely, and choose the sequence that has the highest _overall_ score from a basket of candidate sequences.
+It would be best if we could somehow _not_ decide until we've finished decoding completely, and **choose the sequence that has the highest _overall_ score from a basket of candidate sequences**.
 
 Beam Search does exactly this.
 
@@ -172,17 +159,14 @@ Beam Search does exactly this.
 - After `k` sequences terminate, choose the sequence with the best overall score.
 
 ![Beam Search example](./img/beam_search.png)
-<p align="center">
-  *An illustration of Beam Search with `k`=3.*
-</p>
 
-As you can see, some sequences (striked out) may fail early, as they don't make it to the top `k` at the next step. Once `k` sequences (underlined) complete by hitting the `<end>` token, we choose the one with the highest score.
+As you can see, some sequences (striked out) may fail early, as they don't make it to the top `k` at the next step. Once `k` sequences (underlined) generate the `<end>` token, we choose the one with the highest score.
 
 # Implementation
 
 The sections below briefly describe the implementation.
 
-They are meant to provide some context, but details are best understood directly from the code, which is quite heavily commented.
+They are meant to provide some context, but **details are best understood directly from the code**, which is quite heavily commented.
 
 ### Dataset
 
@@ -194,11 +178,11 @@ We will use [Andrej Karpathy's training, validation, and test splits](http://cs.
 
 We will need three inputs.
 
-##### Images
+#### Images
 
-The Encoder encodes these images. Since we're using a pretrained Encoder, we would need to first process the images into the form this pretrained Encoder is used to.
+Since we're using a pretrained Encoder, we would need to process the images into the form this pretrained Encoder is accustomed to.
 
-Pretrained ImageNet models available as part of PyTorch's `torchvision` module. [This page](https://pytorch.org/docs/master/torchvision/models.html) details the preprocessing or transform we need to do - pixel values must be in the range [0,1] and we must then normalize the image by the mean and standard deviation of the ImageNet images' RGB channels.
+Pretrained ImageNet models available as part of PyTorch's `torchvision` module. [This page](https://pytorch.org/docs/master/torchvision/models.html) details the preprocessing or transformation we need to perform - pixel values must be in the range [0,1] and we must then normalize the image by the mean and standard deviation of the ImageNet images' RGB channels.
 
 ```python
 mean = [0.485, 0.456, 0.406]
@@ -208,9 +192,9 @@ Also, PyTorch follows the NCHW convention, which means the channels dimension (C
 
 We will resize all MSCOCO images to 256x256 for uniformity.
 
-To summarize, the images fed to the model must be a `Float` tensor of dimension `N, 3, 256, 256`, and must be normalized by the aforesaid mean and standard deviation. `N` is the batch size.
+To summarize, the **images fed to the model must be a `Float` tensor of dimension `N, 3, 256, 256`**, and must be normalized by the aforesaid mean and standard deviation. `N` is the batch size.
 
-##### Captions
+#### Captions
 
 Captions are both the target and the inputs of the Decoder as each word is used to generate the next word.
 
@@ -228,15 +212,15 @@ Furthermore, we create a `word_map` which is an index mapping for each word in t
 
 `9876 1 5 120 1 5406 9877 9878 9878 9878....`
 
-To summarize, the captions fed to the model must be an `Int` tensor of dimension `N, L` where `L` is the padded length.
+To summarize, the **captions fed to the model must be an `Int` tensor of dimension `N, L`** where `L` is the padded length.
 
-##### Caption Lengths
+#### Caption Lengths
 
 Since the captions are padded, we would need to keep track of the lengths of each caption. This is the actual length + 2 (for the `<start>` and `<end>` tokens).
 
 Caption lengths are also important because you can build dynamic graphs with PyTorch. We only process a sequence upto its length and don't waste compute on the `<pad>`s.
 
-Caption lengths fed to the model must be an `Int` tensor of dimension `N`.
+**Caption lengths fed to the model must be an `Int` tensor of dimension `N`**.
 
 ### Data pipeline
 
@@ -244,10 +228,10 @@ See `create_input_files()` in `utils.py`.
 
 This reads the data downloaded and saves the following files:
 
-- A HDF5 file for each split with an `I, 3, 256, 256` tensor, where `I` is the number of images in the split. Pixel values are still in the range [0, 255], and are stored as unsigned 8-bit `Int`s.
-- A JSON file for each split with a list of `N_c` * `I` encoded captions, where `N_c` is the number of captions sampled per image. These captions are in the same order as the images in the HDF5 file. Therefore, the `i`th caption will correspond to the `i // N_c`th image.
-- A JSON file for each split with a list of `N_c` * `I` caption lengths. The `i`th value is the length of the `i`th caption, which corresponds to the `i // N_c`th image.
-- A JSON file which stores the `word_map`, the word-to-index dictionary.
+- An **HDF5 file containing images for each split in an `I, 3, 256, 256` tensor**, where `I` is the number of images in the split. Pixel values are still in the range [0, 255], and are stored as unsigned 8-bit `Int`s.
+- A **JSON file for each split with a list of `N_c` * `I` encoded captions**, where `N_c` is the number of captions sampled per image. These captions are in the same order as the images in the HDF5 file. Therefore, the `i`th caption will correspond to the `i // N_c`th image.
+- A **JSON file for each split with a list of `N_c` * `I` caption lengths**. The `i`th value is the length of the `i`th caption, which corresponds to the `i // N_c`th image.
+- A **JSON file which contains the `word_map`**, the word-to-index dictionary.
 
 Before we save these files, we have the option to only use captions that are shorter than a threshold, and to bin less frequent words into an `<unk>` token.
 
@@ -271,7 +255,7 @@ We do add an `AdaptiveAvgPool2d()` layer to resize the encoding to a fixed size.
 
 Since we may want to fine-tune the Encoder, we add a `fine_tune()` method which enables or disables the calculation of gradients for the Encoder's parameters. We only fine-tune convolutional blocks 2 through 4 in the ResNet, because the first convolutional block would have usually learned something very fundamental to image processing, such as detecting lines, edges, curves, etc. We don't mess with the foundations.
 
-The output of the Encoder is the encoded image with dimensions `N, 14, 14, 4096`.
+**The output of the Encoder is the encoded image with dimensions `N, 14, 14, 4096`**.
 
 ### Attention
 
@@ -281,7 +265,7 @@ The Attention network is simple - it's composed of only linear layers and a coup
 
 Separate linear layers transform both the encoded image (flattened to `N, 14 * 14, 4096`) and the hidden state (output) from the Decoder to the same dimension, viz. the Attention size. They are then added and ReLU activated. A third linear layer transforms this result to a dimension of 1, whereupon we apply the softmax to generate the weights `alpha`.
 
-The output of the Attention network is (1) the weighted average with dimensions `N, 4096`, and (2) the weights with dimensions `N, 14 * 14`
+**The outputs of the Attention network are (1) the weighted average with dimensions `N, 4096`, and (2) the weights with dimensions `N, 14 * 14**`
 
 ### Decoder
 
@@ -297,15 +281,17 @@ At the very outset, we sort the `N` images and captions by decreasing caption le
 
 We can iterate over each timestep, processing only the colored regions, which are the _effective_ batch size `N_t` at that timestep. The sorting allows the top `N_t` at any timestep to align with the outputs from the previous step. At the third timestep, for example, we process only the top 5 images, using the top 5 outputs from the previous step.
 
-If you remember, the captions lengths include the `<start>` and `<end>` tokens. But we will not be decoding at the `<end>` token, so we only need to decode upto the word before `<end>`.
+We iterate over the timesteps _manually_ in a `for` loop with a PyTorch [`LSTMCell`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM) instead of iterating automatically without a loop with a PyTorch [`LSTM`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM). This is because we need to execute the Attention mechanism between each decode step. An `LSTMCell` is a single timestep operation, whereas an `LSTM` would iterate over multiple timesteps continously and provide all outputs at once.
 
-We iterate over the timesteps _manually_ in a `for` loop with a PyTorch [`LSTMCell`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM) instead of iterating automatically without a loop with a PyTorch [`LSTM`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM). This is because we need to execute the Attention mechanism between each decode step. An `LSTMCell` is a single timestep operation.
+We compute the weights and attention-weighted encoding at each timestep with the Attention network. In section `4.2.1` of the paper, they recommend passing the attention-weighted encoding through a filter or gate. This gate is a sigmoid activated linear transform of the Decoder's previous hidden state. The authors state that this helps the Attention network put more emphasis on the objects in the image.
 
-At each timestep, for the effective batch size, we compute the weights and attention-weighted encoding. In section `4.2.1` of the paper, they recommend passing the attention-weighted encoding through a gate of sorts. This gate is a sigmoid activated linear transform of the Decoder's previous hidden state. The authors state that this helps the Attention network put more emphasis on the objects in the image.
+We concatenate this filtered attention-weighted encoding with the embedding of the previous word (`<start>` to begin), and run the `LSTMCell` to generate the new hidden state (or output). A linear layer transforms this new hidden state into scores for each word in the vocabulary, which is stored.
 
-We concatenate this filtered attention-weighted encoding with the embedding of the previous word (`<start>` to begin with), and run the `LSTMCell` to generate the new hidden state (or output). A linear layer transforms this new hidden state into scores for each word in the vocabulary.
+We also store the weights returned by the Attention network at each timestep. You will see why soon enough.
 
-We also store the weights returned at each timestep. You will see why soon enough.
+**The outputs of the Decoder are (1) predictions/scores at all timesteps with dimensions `N, L, V`, (2) weights at all timesteps with dimensions `N, L, P`** where`L` is the maximum caption decode-length in the batch, `V` is the vocabulary size, and `P` is the number of pixels.
+
+We also output the sorted captions, their lengths, and sort indices.
 
 # Training
 
@@ -313,27 +299,27 @@ See `train.py`.
 
 ### Loss Function
 
-Since we're generating a sequence of words, we use [`CrossEntropyLoss`](https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss), which is the negative log of the softmax probability of the true word at each generated word. You only need to submit the raw output of the last linear layer in the Decoder, the loss function will perform the softmax and log operations.
+Since we're generating a sequence of words, we use **[`CrossEntropyLoss`](https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss)**. You only need to submit the raw scores from the final layer in the Decoder, and the loss function will perform the softmax and log operations.
 
-The authors of the paper recommend using a second loss, which is a form of "doubly stochastic regularization". We know the weights sum up to 1 at a given timestep. But we also encourage the weight at a single pixel to sum up to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Towards this end, we try to minimize the difference between 1 and the sum of the weights across all timesteps.
+The authors of the paper recommend using a second loss - a "**doubly stochastic regularization**". We know the weights sum up to 1 at a given timestep. But we also encourage the weight at a single pixel to sum up to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Towards this end, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
 
-In my view, the sigmoid gate in the Decoder and this regularization are key to the model attending well to the relevant parts of the image.
+The sigmoid gate in the Decoder and this regularization are key to the model attending well to the relevant parts of the image.
 
-While computing the losses, we ignore the pads as usual. An easy way to do this is to use PyTorch's [`pack_padded_sequences()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions.
+**We do not compute losses over the padded regions**. An easy way to do this is to use PyTorch's [`pack_padded_sequences()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions. You can now aggregate the loss over this flattened tensor.
 
 ![](./img/sorted2.jpg)
 
-This function is actually used to perform the same dynamic batching (i.e., processing only the effective batch size at each timestep) we performed in our Decoder, when using an `RNN` or `LSTM` in PyTorch. In this case, PyTorch handles the dynamic variable-length graphs internally. You can see an example in `dynamic_rnn.py` in my other tutorial on sequence tagging. We would have used it if we weren't manually iterating because of the Attention network.
+**Note** - This function is actually used to perform the same dynamic batching (i.e., processing only the effective batch size at each timestep) we performed in our Decoder, when using an `RNN` or `LSTM` in PyTorch. In this case, PyTorch handles the dynamic variable-length graphs internally. You can see an example in `dynamic_rnn.py` in my other tutorial on sequence tagging. We would have used this function along with an `LSTM` in our Decoder if we weren't manually iterating because of the Attention network.
 
 ### Early stopping with BLEU
 
 To evaluate the model's performance on the validation set, we will use the [BiLingual Evaluation Understudy (BLEU)](http://www.aclweb.org/anthology/P02-1040.pdf) metric. This evaluates a generated sentence to reference sentence(s). For each caption generated, we will use all `N_c` captions available for that image as the reference.
 
-The authors of the _Show, Attend and Tell_ paper observe that the correlation between the loss and the BLEU score breaks down after a point, so they recomment to early-stop based on the latter.
+The authors of the _Show, Attend and Tell_ paper observe that correlation between the loss and the BLEU score breaks down after a point, so they recommend to stop training early when the BLEU score begins to degrade, even if the loss improves.
 
-I have used the BLEU tool [available in the NLTK module](https://www.nltk.org/_modules/nltk/translate/bleu_score.html).
+I used the BLEU tool [available in the NLTK module](https://www.nltk.org/_modules/nltk/translate/bleu_score.html).
 
-The use of the BLEU metric is controversial because it is not always reliable. The authors also report the METEOR scores for this reason, but I haven't implemented it.
+Note that there is considerable criticism of the BLEU score because it is not always reliable. The authors also report the METEOR scores for this reason, but I haven't implemented this metric.
 
 ### Remarks
 
@@ -422,12 +408,16 @@ Teacher Forcing is when we use the ground truth captions as the input to the Dec
 
 It would be ideal to train using Teacher Forcing [only some of the time](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html#training-the-model), based on a probability. This is called Scheduled Sampling.
 
+(I plan to add the option.)
+
 __Can I use pretrained word embeddings (GloVe, CBOW, skipgram, etc.) instead of learning them from scratch?__
 
 Yes, you could, with the `load_pretrained_embeddings()` method in `Decoder`. You could also choose to fine-tune (or not) with the `fine_tune_embeddings()` method.
 
 __How do I keep track of which tensors allow gradients to be computed?__
 
-With the release of PyTorch `0.4`, `Variable`s are no longer supported. Instead, tensors have the `requires_grad` attribute.
+With the release of PyTorch `0.4`, `Variable`s are no longer supported. Instead, tensors have the `requires_grad` attribute, which decides whether it is tracked by `autograd`, and therefore whether gradients are computed for it during backpropagation.
 
-By default, when you create a tensor from scratch, `requires_grad` will be set to `False`. When a tensor is created from or modified using another tensor that allows gradients, then `requires_grad` will be set to `True`. Tensors which are parameters of `torch.nn` layers will already have `requires_grad` set to `True`.
+- By default, when you create a tensor from scratch, `requires_grad` will be set to `False`.
+- When a tensor is created from or modified using another tensor that allows gradients, then `requires_grad` will be set to `True`.
+- Tensors which are parameters of `torch.nn` layers will already have `requires_grad` set to `True`.
