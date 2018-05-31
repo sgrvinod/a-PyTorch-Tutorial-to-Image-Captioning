@@ -1,6 +1,6 @@
-This is a **[PyTorch](https://pytorch.org) Tutorial to Image Captioning**.
+This is a **PyTorch Tutorial to Image Captioning**.
 
-This is the first of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
+This is the first of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing [PyTorch](https://pytorch.org) library.
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
