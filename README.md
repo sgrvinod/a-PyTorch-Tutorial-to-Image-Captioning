@@ -26,7 +26,7 @@ I'm using `PyTorch 0.4` in `Python 3.6`.
 
 In the interest of keeping things simple, let's choose to implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is still pretty darn amazing.
 
-This model learns _where_ to look.
+**This model learns _where_ to look.**
 
 As you generate a caption, word by word, you can see the the model's gaze shifting across the image.
 
@@ -60,7 +60,7 @@ Here are some captions generated on _test_ images not seen during training or va
 
 ---
 
-There are more examples at the [end of the tutorial]().
+There are more examples at the [end of the tutorial](https://github.com/sgrvinod/caption#some-more-examples).
 
 ---
 
