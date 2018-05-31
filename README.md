@@ -4,7 +4,7 @@ This is the first of a series of tutorials I plan to write about _implementing_ 
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
-Questions, suggestions, or corrections can be posted as issues. 
+Questions, suggestions, or corrections can be posted as issues.
 
 I'm using `PyTorch 0.4` in `Python 3.6`.
 
@@ -293,11 +293,9 @@ See `train.py`.
 
 Since we're generating a sequence of words, we use **[`CrossEntropyLoss`](https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss)**. You only need to submit the raw scores from the final layer in the Decoder, and the loss function will perform the softmax and log operations.
 
-The authors of the paper recommend using a second loss - a "**doubly stochastic regularization**". We know the weights sum to 1 at a given timestep. But we also encourage the weight at a single pixel to sum to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Towards this end, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
+The authors of the paper recommend using a second loss - a "**doubly stochastic regularization**". We know the weights sum to 1 at a given timestep. But we also encourage the weight at a single pixel to sum to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Therefore, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
 
-The sigmoid gate in the Decoder and this regularization are key to the model attending well to the relevant parts of the image.
-
-**We do not compute losses over the padded regions**. An easy way to do this is to use PyTorch's [`pack_padded_sequences()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions. You can now aggregate the loss over this flattened tensor.
+**We do not compute losses over the padded regions**. An easy way to do get rid of the pads is to use PyTorch's [`pack_padded_sequences()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions. You can now aggregate the loss over this flattened tensor.
 
 ![](./img/sorted2.jpg)
 
@@ -380,6 +378,8 @@ In _soft_ attention, which we use here, you're computing the weights and using t
 
 In _hard_ attention, you are choosing to just sample some pixels and this choice is made in a way that is difficult to represent as a differentiable function of its inputs, which complicates computing gradients during back-propagation. This is a stochastic operation.
 
+---
+
 __How do I use an attention network for an NLP task like a sequence to sequence model?__
 
 Much like you use a CNN to generate an encoding with features at each pixel, you would use an RNN to generate encoded features at each timestep i.e. word position in the input.
@@ -390,9 +390,13 @@ With attention, you would attend over the timesteps in the Encoder's output, gen
 
 You could also use Attention without a Decoder. For example, if you want to classify text, you can attend to the important words in the input just once to perform the classification.
 
+---
+
 __Can we use Beam Search during training?__
 
 Not with the current loss function, but [yes](https://arxiv.org/abs/1606.02960). This is not common at all.
+
+---
 
 __What is Teacher Forcing?__
 
@@ -402,9 +406,13 @@ It would be ideal to train using Teacher Forcing [only some of the time](https:/
 
 (I plan to add the option.)
 
+---
+
 __Can I use pretrained word embeddings (GloVe, CBOW, skipgram, etc.) instead of learning them from scratch?__
 
 Yes, you could, with the `load_pretrained_embeddings()` method in `Decoder`. You could also choose to fine-tune (or not) with the `fine_tune_embeddings()` method.
+
+---
 
 __How do I keep track of which tensors allow gradients to be computed?__
 
@@ -413,3 +421,5 @@ With the release of PyTorch `0.4`, `Variable`s are no longer supported. Instead,
 - By default, when you create a tensor from scratch, `requires_grad` will be set to `False`.
 - When a tensor is created from or modified using another tensor that allows gradients, then `requires_grad` will be set to `True`.
 - Tensors which are parameters of `torch.nn` layers will already have `requires_grad` set to `True`.
+
+---
