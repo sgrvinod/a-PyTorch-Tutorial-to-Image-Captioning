@@ -4,7 +4,7 @@ This is the first of a series of tutorials I plan to write about _implementing_ 
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
-Questions, suggestions, or corrections can be posted as issues.
+Questions, suggestions, or corrections can be posted as issues. 
 
 I'm using `PyTorch 0.4` in `Python 3.6`.
 
@@ -251,11 +251,9 @@ See `Encoder` in `models.py`.
 
 We use a pretrained ResNet-101 already available in PyTorch's `torchvision` module. Discard the last two layers (pooling and linear layers), since we only need to encode the image, and not classify it.
 
-We do add an `AdaptiveAvgPool2d()` layer to resize the encoding to a fixed size. This makes it possible to feed images of variable size to the Encoder. (We did, however, resize our input images to `256, 256` because we had to store them together as a single tensor.)
+We do add an `AdaptiveAvgPool2d()` layer to **resize the encoding to a fixed size**. This makes it possible to feed images of variable size to the Encoder. (We did, however, resize our input images to `256, 256` because we had to store them together as a single tensor.)
 
-Since we may want to fine-tune the Encoder, we add a `fine_tune()` method which enables or disables the calculation of gradients for the Encoder's parameters. We only fine-tune convolutional blocks 2 through 4 in the ResNet, because the first convolutional block would have usually learned something very fundamental to image processing, such as detecting lines, edges, curves, etc. We don't mess with the foundations.
-
-**The output of the Encoder is the encoded image with dimensions `N, 14, 14, 4096`**.
+Since we may want to fine-tune the Encoder, we add a `fine_tune()` method which enables or disables the calculation of gradients for the Encoder's parameters. We **only fine-tune convolutional blocks 2 through 4 in the ResNet**, because the first convolutional block would have usually learned something very fundamental to image processing, such as detecting lines, edges, curves, etc. We don't mess with the foundations.
 
 ### Attention
 
@@ -263,9 +261,7 @@ See `Attention` in `models.py`.
 
 The Attention network is simple - it's composed of only linear layers and a couple of activations.
 
-Separate linear layers transform both the encoded image (flattened to `N, 14 * 14, 4096`) and the hidden state (output) from the Decoder to the same dimension, viz. the Attention size. They are then added and ReLU activated. A third linear layer transforms this result to a dimension of 1, whereupon we apply the softmax to generate the weights `alpha`.
-
-**The outputs of the Attention network are (1) the weighted average with dimensions `N, 4096`, and (2) the weights with dimensions `N, 14 * 14**`
+Separate linear layers **transform both the encoded image (flattened to `N, 14 * 14, 4096`) and the hidden state (output) from the Decoder to the same dimension**, viz. the Attention size. They are then added and ReLU activated. A third linear layer **transforms this result to a dimension of 1**, whereupon we **apply the softmax to generate the weights** `alpha`.
 
 ### Decoder
 
@@ -273,25 +269,21 @@ See `DecoderWithAttention` in `models.py`.
 
 The output of the Encoder is received here and flattened to dimensions `N, 14 * 14, 4096`. This is just convenient and prevents having to reshape the tensor multiple times.
 
-We initialize the hidden and cell state of the LSTM using the encoded image with the `init_hidden_state()` method, which uses two separate linear layers.
+We **initialize the hidden and cell state of the LSTM** using the encoded image with the `init_hidden_state()` method, which uses two separate linear layers.
 
-At the very outset, we sort the `N` images and captions by decreasing caption lengths. This is so that we can process only _valid_ timesteps, i.e., not process the `<pad>`s.
+At the very outset, we **sort the `N` images and captions by decreasing caption lengths**. This is so that we can process only _valid_ timesteps, i.e., not process the `<pad>`s.
 
 ![](./img/sorted.jpg)
 
-We can iterate over each timestep, processing only the colored regions, which are the _effective_ batch size `N_t` at that timestep. The sorting allows the top `N_t` at any timestep to align with the outputs from the previous step. At the third timestep, for example, we process only the top 5 images, using the top 5 outputs from the previous step.
+We can iterate over each timestep, processing only the colored regions, which are the **_effective_ batch size** `N_t` at that timestep. The sorting allows the top `N_t` at any timestep to align with the outputs from the previous step. At the third timestep, for example, we process only the top 5 images, using the top 5 outputs from the previous step.
 
-We iterate over the timesteps _manually_ in a `for` loop with a PyTorch [`LSTMCell`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM) instead of iterating automatically without a loop with a PyTorch [`LSTM`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM). This is because we need to execute the Attention mechanism between each decode step. An `LSTMCell` is a single timestep operation, whereas an `LSTM` would iterate over multiple timesteps continously and provide all outputs at once.
+This **iteration is performed _manually_ in a `for` loop** with a PyTorch [`LSTMCell`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM) instead of iterating automatically without a loop with a PyTorch [`LSTM`](https://pytorch.org/docs/master/nn.html#torch.nn.LSTM). This is because we need to execute the Attention mechanism between each decode step. An `LSTMCell` is a single timestep operation, whereas an `LSTM` would iterate over multiple timesteps continously and provide all outputs at once.
 
-We compute the weights and attention-weighted encoding at each timestep with the Attention network. In section `4.2.1` of the paper, they recommend passing the attention-weighted encoding through a filter or gate. This gate is a sigmoid activated linear transform of the Decoder's previous hidden state. The authors state that this helps the Attention network put more emphasis on the objects in the image.
+We **compute the weights and attention-weighted encoding** at each timestep with the Attention network. In section `4.2.1` of the paper, they recommend **passing the attention-weighted encoding through a filter or gate**. This gate is a sigmoid activated linear transform of the Decoder's previous hidden state. The authors state that this helps the Attention network put more emphasis on the objects in the image.
 
-We concatenate this filtered attention-weighted encoding with the embedding of the previous word (`<start>` to begin), and run the `LSTMCell` to generate the new hidden state (or output). A linear layer transforms this new hidden state into scores for each word in the vocabulary, which is stored.
+We **concatenate this filtered attention-weighted encoding with the embedding of the previous word** (`<start>` to begin), and run the `LSTMCell` to **generate the new hidden state (or output)**. A linear layer **transforms this new hidden state into scores for each word in the vocabulary**, which is stored.
 
 We also store the weights returned by the Attention network at each timestep. You will see why soon enough.
-
-**The outputs of the Decoder are (1) predictions/scores at all timesteps with dimensions `N, L, V`, (2) weights at all timesteps with dimensions `N, L, P`** where`L` is the maximum caption decode-length in the batch, `V` is the vocabulary size, and `P` is the number of pixels.
-
-We also output the sorted captions, their lengths, and sort indices.
 
 # Training
 
@@ -301,7 +293,7 @@ See `train.py`.
 
 Since we're generating a sequence of words, we use **[`CrossEntropyLoss`](https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss)**. You only need to submit the raw scores from the final layer in the Decoder, and the loss function will perform the softmax and log operations.
 
-The authors of the paper recommend using a second loss - a "**doubly stochastic regularization**". We know the weights sum up to 1 at a given timestep. But we also encourage the weight at a single pixel to sum up to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Towards this end, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
+The authors of the paper recommend using a second loss - a "**doubly stochastic regularization**". We know the weights sum to 1 at a given timestep. But we also encourage the weight at a single pixel to sum to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Towards this end, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
 
 The sigmoid gate in the Decoder and this regularization are key to the model attending well to the relevant parts of the image.
 
