@@ -40,12 +40,18 @@ fine_tune_encoder = True  # fine-tune encoder?
 
 
 def main():
+    """
+    Training and validation.
+    """
+
     global best_bleu4, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map
 
+    # Read word map
     word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
     with open(word_map_file, 'r') as j:
         word_map = json.load(j)
 
+    # Initialize / load checkpoint
     if checkpoint is None:
         decoder = DecoderWithAttention(attention_dim=attention_dim,
                                        embed_dim=emb_dim,
@@ -76,7 +82,7 @@ def main():
 
     # Move to GPU, if available
     decoder = decoder.to(device)
-    encoder = encoder.to(device) if encoder is not None else None
+    encoder = encoder.to(device)
 
     # Loss function
     criterion = nn.CrossEntropyLoss().to(device)
@@ -85,15 +91,16 @@ def main():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     train_loader = torch.utils.data.DataLoader(
-        hdf5Dataset(data_folder, data_name, 'TRAIN', transform=transforms.Compose([normalize])),
+        CaptionDataset(data_folder, data_name, 'TRAIN', transform=transforms.Compose([normalize])),
         batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(
-        hdf5Dataset(data_folder, data_name, 'VAL', transform=transforms.Compose([normalize])),
+        CaptionDataset(data_folder, data_name, 'VAL', transform=transforms.Compose([normalize])),
         batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
 
+    # Epochs
     for epoch in range(start_epoch, epochs):
 
-        # Decay learning rate if there is no improvement for 3 consecutive epochs, and terminate training after 8
+        # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
         if epochs_since_improvement == 20:
             break
         if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
@@ -101,6 +108,7 @@ def main():
             if fine_tune_encoder:
                 adjust_learning_rate(encoder_optimizer, 0.8)
 
+        # One epoch's training
         train(train_loader=train_loader,
               encoder=encoder,
               decoder=decoder,
@@ -109,32 +117,41 @@ def main():
               decoder_optimizer=decoder_optimizer,
               epoch=epoch)
 
+        # One epoch's validation
         recent_bleu4 = validate(val_loader=val_loader,
                                 encoder=encoder,
                                 decoder=decoder,
                                 criterion=criterion)
 
+        # Check if there was an improvement
         is_best = recent_bleu4 > best_bleu4
         best_bleu4 = max(recent_bleu4, best_bleu4)
-
         if not is_best:
             epochs_since_improvement += 1
             print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
         else:
             epochs_since_improvement = 0
 
+        # Save checkpoint
         save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
                         decoder_optimizer, recent_bleu4, is_best)
 
 
 def train(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
     """
-    Perform one epoch's training.
+    Performs one epoch's training.
+
+    :param train_loader: DataLoader for training data
+    :param encoder: encoder model
+    :param decoder: decoder model
+    :param criterion: loss layer
+    :param encoder_optimizer: optimizer to update encoder's weights (if fine-tuning)
+    :param decoder_optimizer: optimizer to update decoder's weights
+    :param epoch: epoch number
     """
 
-    decoder.train()  # train mode
-    if encoder is not None:
-        encoder.train()
+    decoder.train()  # train mode (dropout and batchnorm is used)
+    encoder.train()
 
     batch_time = AverageMeter()  # forward prop. + back prop. time
     data_time = AverageMeter()  # data loading time
@@ -143,16 +160,17 @@ def train(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_
 
     start = time.time()
 
+    # Batches
     for i, (imgs, caps, caplens) in enumerate(train_loader):
         data_time.update(time.time() - start)
 
+        # Move to GPU, if available
         imgs = imgs.to(device)
         caps = caps.to(device)
         caplens = caplens.to(device)
 
         # Forward prop.
-        if encoder is not None:
-            imgs = encoder(imgs)
+        imgs = encoder(imgs)
         scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(imgs, caps, caplens)
 
         # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
@@ -173,14 +191,15 @@ def train(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_
         decoder_optimizer.zero_grad()
         if encoder_optimizer is not None:
             encoder_optimizer.zero_grad()
-
         loss.backward()
 
+        # Clip gradients
         if grad_clip is not None:
             clip_gradient(decoder_optimizer, grad_clip)
             if encoder_optimizer is not None:
                 clip_gradient(encoder_optimizer, grad_clip)
 
+        # Update weights
         decoder_optimizer.step()
         if encoder_optimizer is not None:
             encoder_optimizer.step()
@@ -193,6 +212,7 @@ def train(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_
 
         start = time.time()
 
+        # Print status
         if i % print_freq == 0:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -205,21 +225,32 @@ def train(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_
 
 
 def validate(val_loader, encoder, decoder, criterion):
-    decoder.eval()  # eval mode
+    """
+    Performs one epoch's validation.
+
+    :param val_loader: DataLoader for validation data.
+    :param encoder: encoder model
+    :param decoder: decoder model
+    :param criterion: loss layer
+    :return: BLEU-4 score
+    """
+    decoder.eval()  # eval mode (no dropout or batchnorm)
     if encoder is not None:
         encoder.eval()
 
-    batch_time = AverageMeter()  # forward prop. + gradient descent time this batch
-    losses = AverageMeter()  # loss this batch
-    top5accs = AverageMeter()  # top5 accuracy this batch
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    top5accs = AverageMeter()
 
     start = time.time()
 
     references = list()  # references (true captions) for calculating BLEU-4 score
     hypotheses = list()  # hypotheses (predictions)
 
+    # Batches
     for i, (imgs, caps, caplens, allcaps) in enumerate(val_loader):
 
+        # Move to device, if available
         imgs = imgs.to(device)
         caps = caps.to(device)
         caplens = caplens.to(device)
@@ -269,7 +300,7 @@ def validate(val_loader, encoder, decoder, criterion):
             img_caps = allcaps[j].tolist()
             img_captions = list(
                 map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<pad>']}],
-                    img_caps))  # remove <start>, <end>, and pads
+                    img_caps))  # remove <start> and pads
             references.append(img_captions)
 
         # Hypotheses
@@ -277,7 +308,7 @@ def validate(val_loader, encoder, decoder, criterion):
         preds = preds.tolist()
         temp_preds = list()
         for j, p in enumerate(preds):
-            temp_preds.append(preds[j][:decode_lengths[j]])  # remove <end> and pads
+            temp_preds.append(preds[j][:decode_lengths[j]])  # remove pads
         preds = temp_preds
         hypotheses.extend(preds)
 

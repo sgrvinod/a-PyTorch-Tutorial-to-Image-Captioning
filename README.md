@@ -1,6 +1,6 @@
-This is a **PyTorch Tutorial to Image Captioning**.
+This is a **[PyTorch](https://pytorch.org) Tutorial to Image Captioning**.
 
-This is the first of a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing [PyTorch](https://pytorch.org) library.
+This is the first in a series of tutorials I plan to write about _implementing_ cool models on your own with the amazing PyTorch library.
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
@@ -24,9 +24,9 @@ I'm using `PyTorch 0.4` in `Python 3.6`.
 
 **To build a model that can generate a descriptive caption for an image we provide it.**
 
-In the interest of keeping things simple, let's choose to implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is still pretty darn amazing.
+In the interest of keeping things simple, let's implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is still pretty darn amazing.
 
-**This model learns _where_ to look.**
+This model learns _where_ to look.
 
 As you generate a caption, word by word, you can see the the model's gaze shifting across the image.
 
@@ -78,7 +78,7 @@ There are more examples at the [end of the tutorial](https://github.com/sgrvinod
 
 # Overview
 
-In this section, I will present a broad overview of this model. I don't really get into the _minutiae_ here - feel free to skip to the implementation section and commented code for details.
+In this section, I will present a broad overview of this model. If you're already familiar with it, you can skip straight to the implementation section or the commented code.
 
 ### Encoder
 

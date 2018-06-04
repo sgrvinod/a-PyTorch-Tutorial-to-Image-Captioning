@@ -14,6 +14,21 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=3):
+    """
+    Reads an image and captions it with beam search.
+
+    :param encoder: encoder model
+    :param decoder: decoder model
+    :param image_path: path to image
+    :param word_map: word map
+    :param beam_size: number of sequences to consider at each decode-step
+    :return: caption, weights for visualization
+    """
+
+    k = beam_size
+    vocab_size = len(word_map)
+
+    # Read image and process
     img = imread(image_path)
     if len(img.shape) == 2:
         img = img[:, :, np.newaxis]
@@ -26,9 +41,6 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
                                      std=[0.229, 0.224, 0.225])
     transform = transforms.Compose([normalize])
     image = transform(img)  # (3, 256, 256)
-
-    k = beam_size
-    vocab_size = len(word_map)
 
     # Encode
     image = image.unsqueeze(0)  # (1, 3, 256, 256)
@@ -136,6 +148,17 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
 
 
 def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
+    """
+    Visualizes caption with weights at every word.
+
+    Adapted from paper authors' repo: https://github.com/kelvinxu/arctic-captions/blob/master/alpha_visualization.ipynb
+
+    :param image_path: path to image that has been captioned
+    :param seq: caption
+    :param alphas: weights
+    :param rev_word_map: reverse word mapping, i.e. ix2word
+    :param smooth: smooth weights?
+    """
     image = Image.open(image_path)
     image = image.resize([14 * 24, 14 * 24], Image.LANCZOS)
 
