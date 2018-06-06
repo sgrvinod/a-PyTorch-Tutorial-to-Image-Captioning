@@ -4,6 +4,8 @@ This is the first in a series of tutorials I plan to write about _implementing_ 
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
+If you're new to PyTorch, first check out [Deep Learning with PyTorch: A 60 Minute Blitz](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html) and [Learning PyTorch with Examples](https://pytorch.org/tutorials/beginner/pytorch_with_examples.html).
+
 Questions, suggestions, or corrections can be posted as issues.
 
 I'm using `PyTorch 0.4` in `Python 3.6`.
@@ -24,7 +26,7 @@ I'm using `PyTorch 0.4` in `Python 3.6`.
 
 **To build a model that can generate a descriptive caption for an image we provide it.**
 
-In the interest of keeping things simple, let's implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is still pretty darn amazing.
+In the interest of keeping things simple, let's implement the [_Show, Attend, and Tell_](https://arxiv.org/abs/1502.03044) paper. This is by no means the current state-of-the-art, but is still pretty darn amazing. The authors' original implementation can be found [here](https://github.com/kelvinxu/arctic-captions).
 
 This model learns _where_ to look.
 
@@ -416,10 +418,8 @@ Yes, you could, with the `load_pretrained_embeddings()` method in `Decoder`. You
 
 __How do I keep track of which tensors allow gradients to be computed?__
 
-With the release of PyTorch `0.4`, `Variable`s are no longer supported. Instead, tensors have the `requires_grad` attribute, which decides whether it is tracked by `autograd`, and therefore whether gradients are computed for it during backpropagation.
+With the release of PyTorch `0.4`, wrapping tensors as `Variable`s is no longer required. Instead, tensors have the `requires_grad` attribute, which decides whether it is tracked by `autograd`, and therefore whether gradients are computed for it during backpropagation.
 
 - By default, when you create a tensor from scratch, `requires_grad` will be set to `False`.
 - When a tensor is created from or modified using another tensor that allows gradients, then `requires_grad` will be set to `True`.
 - Tensors which are parameters of `torch.nn` layers will already have `requires_grad` set to `True`.
-
----
