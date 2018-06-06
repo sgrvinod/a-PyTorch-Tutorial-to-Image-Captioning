@@ -4,7 +4,7 @@ This is the first in a series of tutorials I plan to write about _implementing_ 
 
 Basic knowledge of PyTorch, convolutional and recurrent neural networks is assumed.
 
-If you're new to PyTorch, first check out [Deep Learning with PyTorch: A 60 Minute Blitz](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html) and [Learning PyTorch with Examples](https://pytorch.org/tutorials/beginner/pytorch_with_examples.html).
+If you're new to PyTorch, first read [Deep Learning with PyTorch: A 60 Minute Blitz](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html) and [Learning PyTorch with Examples](https://pytorch.org/tutorials/beginner/pytorch_with_examples.html).
 
 Questions, suggestions, or corrections can be posted as issues.
 
@@ -12,15 +12,15 @@ I'm using `PyTorch 0.4` in `Python 3.6`.
 
 # Contents
 
-[***Objective***](https://github.com/sgrvinod/caption#objective)
+[***Objective***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#objective)
 
-[***Concepts***](https://github.com/sgrvinod/caption#concepts)
+[***Concepts***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#concepts)
 
-[***Overview***](https://github.com/sgrvinod/caption#overview)
+[***Overview***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#overview)
 
-[***Implementation***](https://github.com/sgrvinod/caption#implementation)
+[***Implementation***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#implementation)
 
-[***Frequently Asked Questions***](https://github.com/sgrvinod/caption#faqs)
+[***Frequently Asked Questions***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#faqs)
 
 # Objective
 
@@ -80,7 +80,7 @@ There are more examples at the [end of the tutorial](https://github.com/sgrvinod
 
 # Overview
 
-In this section, I will present a broad overview of this model. If you're already familiar with it, you can skip straight to the implementation section or the commented code.
+In this section, I will present an overview of this model. If you're already familiar with it, you can skip straight to the [Implementation](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#implementation) section or the commented code.
 
 ### Encoder
 
@@ -134,7 +134,7 @@ We will use _soft_ Attention, where the weights of the pixels add up to 1. If th
 <img src="./img/weights.png">
 </p>
 
-You could interpret this as computing the **probability that a pixel is _the_ place to look to generate the next word**.
+You could interpret this entire process as computing the **probability that a pixel is _the_ place to look to generate the next word**.
 
 ### Putting it all together
 
@@ -200,7 +200,7 @@ Also, PyTorch follows the NCHW convention, which means the channels dimension (C
 
 We will resize all MSCOCO images to 256x256 for uniformity.
 
-To summarize, the **images fed to the model must be a `Float` tensor of dimension `N, 3, 256, 256`**, and must be normalized by the aforesaid mean and standard deviation. `N` is the batch size.
+Therefore, **images fed to the model must be a `Float` tensor of dimension `N, 3, 256, 256`**, and must be normalized by the aforesaid mean and standard deviation. `N` is the batch size.
 
 #### Captions
 
@@ -220,7 +220,7 @@ Furthermore, we create a `word_map` which is an index mapping for each word in t
 
 `9876 1 5 120 1 5406 9877 9878 9878 9878....`
 
-To summarize, the **captions fed to the model must be an `Int` tensor of dimension `N, L`** where `L` is the padded length.
+Therefore, **captions fed to the model must be an `Int` tensor of dimension `N, L`** where `L` is the padded length.
 
 #### Caption Lengths
 
@@ -228,11 +228,11 @@ Since the captions are padded, we would need to keep track of the lengths of eac
 
 Caption lengths are also important because you can build dynamic graphs with PyTorch. We only process a sequence upto its length and don't waste compute on the `<pad>`s.
 
-**Caption lengths fed to the model must be an `Int` tensor of dimension `N`**.
+Therefore, **caption lengths fed to the model must be an `Int` tensor of dimension `N`**.
 
 ### Data pipeline
 
-See `create_input_files()` in `utils.py`.
+See `create_input_files()` in [`utils.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
 
 This reads the data downloaded and saves the following files –
 
@@ -245,7 +245,7 @@ Before we save these files, we have the option to only use captions that are sho
 
 We use HDF5 files for the images because we will read them directly from disk during training / validation. They're simply too large to fit into RAM all at once. But we do load all captions and their lengths into memory.
 
-See `CaptionDataset` in `datasets.py`.
+See `CaptionDataset` in [`datasets.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/datasets.py).
 
 This is a subclass of PyTorch [`Dataset`](https://pytorch.org/docs/master/data.html#torch.utils.data.Dataset). It needs a `__len__` method defined, which returns the size of the dataset, and a `__getitem__` method which returns the `i`th image, caption, and caption length.
 
@@ -255,7 +255,7 @@ The `Dataset` will be used by a PyTorch [`DataLoader`](https://pytorch.org/docs/
 
 ### Encoder
 
-See `Encoder` in `models.py`.
+See `Encoder` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/models.py).
 
 We use a pretrained ResNet-101 already available in PyTorch's `torchvision` module. Discard the last two layers (pooling and linear layers), since we only need to encode the image, and not classify it.
 
@@ -265,7 +265,7 @@ Since we may want to fine-tune the Encoder, we add a `fine_tune()` method which 
 
 ### Attention
 
-See `Attention` in `models.py`.
+See `Attention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
 
 The Attention network is simple – it's composed of only linear layers and a couple of activations.
 
@@ -273,7 +273,7 @@ Separate linear layers **transform both the encoded image (flattened to `N, 14 *
 
 ### Decoder
 
-See `DecoderWithAttention` in `models.py`.
+See `DecoderWithAttention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
 
 The output of the Encoder is received here and flattened to dimensions `N, 14 * 14, 4096`. This is just convenient and prevents having to reshape the tensor multiple times.
 
@@ -295,7 +295,7 @@ We also store the weights returned by the Attention network at each timestep. Yo
 
 # Training
 
-See `train.py`.
+See [`train.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
 
 ### Loss Function
 
@@ -334,7 +334,7 @@ I trained for 20 epochs, and the BLEU score peaked at about `23.25` at the 13th 
 
 I continued from the 13th epoch checkpoint allowing fine-tuning of the Encoder with a batch size of `32`. The smaller batch size is because the model is now larger because it contains the Encoder's gradients.
 
-With fine-tuning, the score rose to `24.25` in just about 3 epochs. This is fairly close to the results in the paper, although our BLEU evaluation may be structured/parameterized differently. Continuing training would probably have pushed the score slightly higher but I had to commit my GPU elsewhere.
+With fine-tuning, the score rose to `24.29` in just about 3 epochs. This is fairly close to the results in the paper, although our BLEU evaluation may be structured/parameterized differently. Continuing training would probably have pushed the score slightly higher but I had to commit my GPU elsewhere.
 
 When fine-tuning during Transfer Learning, it's always better to use a learning rate considerably smaller than what was originally used to train the borrowed model. This is because the model is already quite optimized, and we don't want to change anything too quickly. I used `Adam()` for the Encoder as well, but with a learning rate of `1e-4`.
 
@@ -386,7 +386,7 @@ In contrast, we would actually need to feed the previously generated word to the
 
 __You said__ ___soft___ __attention. Is there, um, a__ ___hard___ __attention?__
 
-Yes, the _Show, Attend and Tell_ paper uses both variants, and Decoder with "hard" attention performs marginally better.
+Yes, the _Show, Attend and Tell_ paper uses both variants, and the Decoder with "hard" attention performs marginally better.
 
 In _soft_ attention, which we use here, you're computing the weights and using the weighted average of the features across all pixels. This is a deterministic, differentiable operation.
 
@@ -400,7 +400,7 @@ Much like you use a CNN to generate an encoding with features at each pixel, you
 
 Without attention, you would use the Encoder's output at the last timestep as the encoding for the entire sentence, since it would also contain information from prior timesteps. The Encoder's last output now bears the burden of having to encode the entire sentence meaningfully, which is not easy, especially for longer sentences.
 
-With attention, you would attend over the timesteps in the Encoder's output, generating weights for each timestep/word, and take the weighted average to represent the sentence. In a sequence to sequence to task like machine translation, you would attend to the relevant words in the input as you generate each word in the output.
+With attention, you would attend over the timesteps in the Encoder's output, generating weights for each timestep/word, and take the weighted average to represent the sentence. In a sequence to sequence task like machine translation, you would attend to the relevant words in the input as you generate each word in the output.
 
 You could also use Attention without a Decoder. For example, if you want to classify text, you can attend to the important words in the input just once to perform the classification.
 
@@ -418,13 +418,13 @@ Teacher Forcing is when we use the ground truth captions as the input to the Dec
 
 It would be ideal to train using Teacher Forcing [only some of the time](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html#training-the-model), based on a probability. This is called Scheduled Sampling.
 
-(I plan to add the option.)
+(I plan to add the option).
 
 ---
 
 __Can I use pretrained word embeddings (GloVe, CBOW, skipgram, etc.) instead of learning them from scratch?__
 
-Yes, you could, with the `load_pretrained_embeddings()` method in `Decoder`. You could also choose to fine-tune (or not) with the `fine_tune_embeddings()` method.
+Yes, you could, with the `load_pretrained_embeddings()` method in the `Decoder`. You could also choose to fine-tune (or not) with the `fine_tune_embeddings()` method.
 
 ---
 
