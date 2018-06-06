@@ -112,7 +112,7 @@ In a typical setting without Attention, you could simply average the encoded ima
 
 ![Decoder without Attention](./img/decoder_no_att.png)
 
-In a setting _with_ Attention, we want the Decoder to be able to **look at different parts of the image at different points in the sequence**. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on the - you guessed it - football!
+In a setting _with_ Attention, we want the Decoder to be able to **look at different parts of the image at different points in the sequence**. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on the – you guessed it – football!
 
 ![Decoding with Attention](./img/decoder_att.png)
 
@@ -124,11 +124,17 @@ The Attention network **computes the weights**.
 
 Intuitively, how would you estimate the importance of a certain part of an image? You would need to be aware of the sequence you have generated _thus far_, so you can look at the image and decide what needs describing next. For example, after you mention `a man`, it is logical to declare that he is `holding a football`.
 
-This is exactly what the Attention mechanism does - it considers the sequence generated thus far, and _attends_ to the part of the image that needs describing next.
+This is exactly what the Attention mechanism does – it considers the sequence generated thus far, and _attends_ to the part of the image that needs describing next.
 
 ![Attention](./img/att.png)
 
-We will use _soft_ Attention, where the weights of the pixels add up to 1. You could interpret this as computing the **probability that a pixel is _the_ place to look to generate the next word**.
+We will use _soft_ Attention, where the weights of the pixels add up to 1. If there are `P` pixels in our encoded image, then at each timestep `t` –
+
+<p align="center">
+<img src="./img/weights.png">
+</p>
+
+You could interpret this as computing the **probability that a pixel is _the_ place to look to generate the next word**.
 
 ### Putting it all together
 
@@ -145,7 +151,7 @@ It might be clear by now what our combined network looks like.
 
 We use a linear layer to transform the Decoder's output into a score for each word in the vocabulary.
 
-The straightforward - and quite greedy - option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. And it's not just the first word - each word in the sequence has consequences for the ones that succeed it.
+The straightforward – and quite greedy – option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. And it's not just the first word – each word in the sequence has consequences for the ones that succeed it.
 
 It might very well happen that if you'd chosen the _third_ best word at that first step, and the _second_ best word at the second step, and so on... _that_ would be the best sequence you could generate.
 
@@ -184,7 +190,7 @@ We will need three inputs.
 
 Since we're using a pretrained Encoder, we would need to process the images into the form this pretrained Encoder is accustomed to.
 
-Pretrained ImageNet models available as part of PyTorch's `torchvision` module. [This page](https://pytorch.org/docs/master/torchvision/models.html) details the preprocessing or transformation we need to perform - pixel values must be in the range [0,1] and we must then normalize the image by the mean and standard deviation of the ImageNet images' RGB channels.
+Pretrained ImageNet models available as part of PyTorch's `torchvision` module. [This page](https://pytorch.org/docs/master/torchvision/models.html) details the preprocessing or transformation we need to perform – pixel values must be in the range [0,1] and we must then normalize the image by the mean and standard deviation of the ImageNet images' RGB channels.
 
 ```python
 mean = [0.485, 0.456, 0.406]
@@ -228,7 +234,7 @@ Caption lengths are also important because you can build dynamic graphs with PyT
 
 See `create_input_files()` in `utils.py`.
 
-This reads the data downloaded and saves the following files:
+This reads the data downloaded and saves the following files –
 
 - An **HDF5 file containing images for each split in an `I, 3, 256, 256` tensor**, where `I` is the number of images in the split. Pixel values are still in the range [0, 255], and are stored as unsigned 8-bit `Int`s.
 - A **JSON file for each split with a list of `N_c` * `I` encoded captions**, where `N_c` is the number of captions sampled per image. These captions are in the same order as the images in the HDF5 file. Therefore, the `i`th caption will correspond to the `i // N_c`th image.
@@ -261,7 +267,7 @@ Since we may want to fine-tune the Encoder, we add a `fine_tune()` method which 
 
 See `Attention` in `models.py`.
 
-The Attention network is simple - it's composed of only linear layers and a couple of activations.
+The Attention network is simple – it's composed of only linear layers and a couple of activations.
 
 Separate linear layers **transform both the encoded image (flattened to `N, 14 * 14, 4096`) and the hidden state (output) from the Decoder to the same dimension**, viz. the Attention size. They are then added and ReLU activated. A third linear layer **transforms this result to a dimension of 1**, whereupon we **apply the softmax to generate the weights** `alpha`.
 
@@ -295,13 +301,19 @@ See `train.py`.
 
 Since we're generating a sequence of words, we use **[`CrossEntropyLoss`](https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss)**. You only need to submit the raw scores from the final layer in the Decoder, and the loss function will perform the softmax and log operations.
 
-The authors of the paper recommend using a second loss - a "**doubly stochastic regularization**". We know the weights sum to 1 at a given timestep. But we also encourage the weight at a single pixel to sum to 1 across _all_ timesteps. This means we want the model to attend to every pixel over the course of generating the entire sequence. Therefore, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
+The authors of the paper recommend using a second loss – a "**doubly stochastic regularization**". We know the weights sum to 1 at a given timestep. But we also encourage the weights at a single pixel `p` to sum to 1 across _all_ timesteps `T` –
+
+<p align="center">
+<img src="./img/doublystochastic.png">
+</p>
+
+This means we want the model to attend to every pixel over the course of generating the entire sequence. Therefore, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
 
 **We do not compute losses over the padded regions**. An easy way to do get rid of the pads is to use PyTorch's [`pack_padded_sequences()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions. You can now aggregate the loss over this flattened tensor.
 
 ![](./img/sorted2.jpg)
 
-**Note** - This function is actually used to perform the same dynamic batching (i.e., processing only the effective batch size at each timestep) we performed in our Decoder, when using an `RNN` or `LSTM` in PyTorch. In this case, PyTorch handles the dynamic variable-length graphs internally. You can see an example in `dynamic_rnn.py` in my other tutorial on sequence tagging. We would have used this function along with an `LSTM` in our Decoder if we weren't manually iterating because of the Attention network.
+**Note** – This function is actually used to perform the same dynamic batching (i.e., processing only the effective batch size at each timestep) we performed in our Decoder, when using an `RNN` or `LSTM` in PyTorch. In this case, PyTorch handles the dynamic variable-length graphs internally. You can see an example in `dynamic_rnn.py` in my other tutorial on sequence tagging. We would have used this function along with an `LSTM` in our Decoder if we weren't manually iterating because of the Attention network.
 
 ### Early stopping with BLEU
 
@@ -364,7 +376,7 @@ In contrast, we would actually need to feed the previously generated word to the
 
 ---
 
-**The ~~Turing~~ Tommy Test**: you know AI's not really AI because it hasn't watched _The Room_ and doesn't recognize greatness when it sees it.
+**The ~~Turing~~ Tommy Test** – you know AI's not really AI because it hasn't watched _The Room_ and doesn't recognize greatness when it sees it.
 
 ![](./img/tommy.png)
 
