@@ -265,7 +265,7 @@ Since we may want to fine-tune the Encoder, we add a `fine_tune()` method which 
 
 ### Attention
 
-See `Attention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
+See `Attention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/models.py).
 
 The Attention network is simple – it's composed of only linear layers and a couple of activations.
 
@@ -273,7 +273,7 @@ Separate linear layers **transform both the encoded image (flattened to `N, 14 *
 
 ### Decoder
 
-See `DecoderWithAttention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
+See `DecoderWithAttention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/models.py).
 
 The output of the Encoder is received here and flattened to dimensions `N, 14 * 14, 4096`. This is just convenient and prevents having to reshape the tensor multiple times.
 
@@ -295,7 +295,7 @@ We also store the weights returned by the Attention network at each timestep. Yo
 
 # Training
 
-See [`train.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/utils.py).
+See [`train.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/train.py).
 
 ### Loss Function
 
@@ -342,7 +342,7 @@ On my Titan-X (Pascal), it took 55 minutes per epoch without fine-tuning, and 2.
 
 # Inference
 
-See `caption.py`.
+See [`caption.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/caption.py).
 
 During inference, we cannot directly use the `forward()` method in the Decoder because it uses the ground truth of the captions as the inputs to the LSTM at each timestep. This is called Teacher Forcing, and is commonly used to train sequence models.
 
