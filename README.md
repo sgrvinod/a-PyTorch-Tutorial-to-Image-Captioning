@@ -20,6 +20,10 @@ I'm using `PyTorch 0.4` in `Python 3.6`.
 
 [***Implementation***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#implementation)
 
+[***Training***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#training)
+
+[***Inference***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#inference)
+
 [***Frequently Asked Questions***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#faqs)
 
 # Objective
@@ -309,7 +313,7 @@ The authors of the paper recommend using a second loss – a "**doubly stochasti
 
 This means we want the model to attend to every pixel over the course of generating the entire sequence. Therefore, we try to **minimize the difference between 1 and the sum of a pixel's weights across all timesteps**.
 
-**We do not compute losses over the padded regions**. An easy way to do get rid of the pads is to use PyTorch's [`pack_padded_sequences()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions. You can now aggregate the loss over this flattened tensor.
+**We do not compute losses over the padded regions**. An easy way to do get rid of the pads is to use PyTorch's [`pack_padded_sequence()`](https://pytorch.org/docs/master/nn.html#torch.nn.utils.rnn.pack_padded_sequence), which flattens the tensor by timestep while ignoring the padded regions. You can now aggregate the loss over this flattened tensor.
 
 ![](./img/sorted2.jpg)
 
