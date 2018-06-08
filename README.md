@@ -72,7 +72,7 @@ There are more examples at the [end of the tutorial](https://github.com/sgrvinod
 
 # Concepts
 
-* **Image captioning**. You will learn about the general structure of captioning models, how they work, and their implementation.
+* **Image captioning**. Well, duh.
 
 * **Encoder-Decoder architecture**. Any model that generates sequences will use an Encoder to encode the input into a fixed form and a Decoder to decode it, word by word, into a sequence.
 
@@ -80,7 +80,7 @@ There are more examples at the [end of the tutorial](https://github.com/sgrvinod
 
 * **Transfer Learning**. This is when you borrow from an existing model by using parts of it in a new model. This is almost always better than training a new model from scratch (i.e., knowing nothing). As you will see, you can always fine-tune this second-hand knowledge to the specific task at hand. Using pretrained word embeddings is a dumb but valid example. For our image captioning problem, we will use a pretrained Encoder, and then fine-tune it as needed.
 
-* **Beam Search**. This is where you don't let your Decoder be lazy and simply choose the words with the _best_ score at each decode-step.
+* **Beam Search**. This is where you don't let your Decoder be lazy and simply choose the words with the _best_ score at each decode-step. Beam Search is useful for any language modeling problem because it finds the most optimal sequence.
 
 # Overview
 
@@ -342,7 +342,7 @@ With fine-tuning, the score rose to `24.29` in just about 3 epochs. This is fair
 
 When fine-tuning during Transfer Learning, it's always better to use a learning rate considerably smaller than what was originally used to train the borrowed model. This is because the model is already quite optimized, and we don't want to change anything too quickly. I used `Adam()` for the Encoder as well, but with a learning rate of `1e-4`.
 
-On my Titan-X (Pascal), it took 55 minutes per epoch without fine-tuning, and 2.5 hours with fine-tuning at the stated batch sizes.
+On a Titan X (Pascal), it took 55 minutes per epoch without fine-tuning, and 2.5 hours with fine-tuning at the stated batch sizes.
 
 # Inference
 
