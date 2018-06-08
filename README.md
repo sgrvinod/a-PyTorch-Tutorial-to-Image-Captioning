@@ -66,7 +66,7 @@ Here are some captions generated on _test_ images not seen during training or va
 
 ---
 
-There are more examples at the [end of the tutorial](https://github.com/sgrvinod/caption#some-more-examples).
+There are more examples at the [end of the tutorial](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#some-more-examples).
 
 ---
 
