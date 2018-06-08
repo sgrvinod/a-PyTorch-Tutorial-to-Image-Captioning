@@ -20,7 +20,6 @@ attention_dim = 512  # dimension of attention linear layers
 decoder_dim = 512  # dimension of decoder RNN
 decoder_layers = 1  # number of layers in decoder RNN
 dropout = 0.5
-checkpoint = 'BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
 
@@ -36,7 +35,8 @@ grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
 best_bleu4 = 0.  # BLEU-4 score right now
 print_freq = 100  # print training/validation stats every __ batches
-fine_tune_encoder = True  # fine-tune encoder?
+fine_tune_encoder = False  # fine-tune encoder?
+checkpoint = None  # path to checkpoint, None if none
 
 
 def main():
