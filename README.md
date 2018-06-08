@@ -317,7 +317,7 @@ This means we want the model to attend to every pixel over the course of generat
 
 ![](./img/sorted2.jpg)
 
-**Note** – This function is actually used to perform the same dynamic batching (i.e., processing only the effective batch size at each timestep) we performed in our Decoder, when using an `RNN` or `LSTM` in PyTorch. In this case, PyTorch handles the dynamic variable-length graphs internally. You can see an example in `dynamic_rnn.py` in my other tutorial on sequence tagging. We would have used this function along with an `LSTM` in our Decoder if we weren't manually iterating because of the Attention network.
+**Note** – This function is actually used to perform the same dynamic batching (i.e., processing only the effective batch size at each timestep) we performed in our Decoder, when using an `RNN` or `LSTM` in PyTorch. In this case, PyTorch handles the dynamic variable-length graphs internally. You can see an example in [`dynamic_rnn.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Sequence-Labeling/blob/master/ddynamic_rnn.py) in my other tutorial on sequence labeling. We would have used this function along with an `LSTM` in our Decoder if we weren't manually iterating because of the Attention network.
 
 ### Early stopping with BLEU
 
