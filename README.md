@@ -344,6 +344,10 @@ When fine-tuning during Transfer Learning, it's always better to use a learning 
 
 On a Titan X (Pascal), it took 55 minutes per epoch without fine-tuning, and 2.5 hours with fine-tuning at the stated batch sizes.
 
+### Model Checkpoint
+
+You can download this pretrained model [here](https://drive.google.com/open?id=1IonHxr0TsVwajhuNlDgrVtegdTIsfiTR).
+
 # Inference
 
 See [`caption.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/caption.py).
