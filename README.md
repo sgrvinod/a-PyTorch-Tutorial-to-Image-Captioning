@@ -102,7 +102,7 @@ I have chosen to use the **101 layered Residual Network trained on the ImageNet 
 
 ![ResNet Encoder](./img/encoder.png)
 
-These models progressively create smaller and smaller representations of the original image, and each subsequent representation is more "learned", with a greater number of channels. The final encoding produced by our ResNet-101 encoder has a size of 14x14 with 4096 channels, i.e., a `4096, 14, 14` size tensor.
+These models progressively create smaller and smaller representations of the original image, and each subsequent representation is more "learned", with a greater number of channels. The final encoding produced by our ResNet-101 encoder has a size of 14x14 with 2048 channels, i.e., a `2048, 14, 14` size tensor.
 
 I encourage you to experiment with other pre-trained architectures. The paper uses a VGGnet, also pretrained on ImageNet, but without fine-tuning. Either way, modifications are necessary. Since the last layer or two of these models are linear layers coupled with softmax activation for classification, we strip them away.
 
@@ -273,13 +273,13 @@ See `Attention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-
 
 The Attention network is simple – it's composed of only linear layers and a couple of activations.
 
-Separate linear layers **transform both the encoded image (flattened to `N, 14 * 14, 4096`) and the hidden state (output) from the Decoder to the same dimension**, viz. the Attention size. They are then added and ReLU activated. A third linear layer **transforms this result to a dimension of 1**, whereupon we **apply the softmax to generate the weights** `alpha`.
+Separate linear layers **transform both the encoded image (flattened to `N, 14 * 14, 2048`) and the hidden state (output) from the Decoder to the same dimension**, viz. the Attention size. They are then added and ReLU activated. A third linear layer **transforms this result to a dimension of 1**, whereupon we **apply the softmax to generate the weights** `alpha`.
 
 ### Decoder
 
 See `DecoderWithAttention` in [`models.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/models.py).
 
-The output of the Encoder is received here and flattened to dimensions `N, 14 * 14, 4096`. This is just convenient and prevents having to reshape the tensor multiple times.
+The output of the Encoder is received here and flattened to dimensions `N, 14 * 14, 2048`. This is just convenient and prevents having to reshape the tensor multiple times.
 
 We **initialize the hidden and cell state of the LSTM** using the encoded image with the `init_hidden_state()` method, which uses two separate linear layers.
 
