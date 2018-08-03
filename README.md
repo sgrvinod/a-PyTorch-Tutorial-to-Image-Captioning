@@ -325,8 +325,6 @@ To evaluate the model's performance on the validation set, we will use the [BiLi
 
 The authors of the _Show, Attend and Tell_ paper observe that correlation between the loss and the BLEU score breaks down after a point, so they recommend to stop training early when the BLEU score begins to degrade, even if the loss improves.
 
-BLEU is a metric for evaluating naturally generated captions, i.e. without supplying the ground truth of the captions as the inputs to the LSTM at each timestep, which is called **Teacher Forcing**. Since we are performing Teacher Forcing during validation for simplicity and loss comparison, we can use [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py) to compute BLEU scores for the model _without_ Teacher Forcing, which is more appropriate. This is a more realistic indication of the model's performance during inference.
-
 I used the BLEU tool [available in the NLTK module](https://www.nltk.org/_modules/nltk/translate/bleu_score.html).
 
 Note that there is considerable criticism of the BLEU score because it is not always reliable. The authors also report the METEOR scores for this reason, but I haven't implemented this metric.
@@ -336,20 +334,25 @@ Note that there is considerable criticism of the BLEU score because it is not al
 I recommend you train in stages.
 
 I first trained only the Decoder, i.e. without fine-tuning the Encoder, with a batch size of `80`.
-I trained for 20 epochs, and the BLEU-4 score (with Teacher Forcing) peaked at about `23.25` at the 13th epoch. I used the [`Adam()`](https://pytorch.org/docs/master/optim.html#torch.optim.Adam) optimizer with an initial learning rate of `4e-4`.
+I trained for 20 epochs, and the BLEU-4 score peaked at about `23.25` at the 13th epoch. I used the [`Adam()`](https://pytorch.org/docs/master/optim.html#torch.optim.Adam) optimizer with an initial learning rate of `4e-4`.
 
 I continued from the 13th epoch checkpoint allowing fine-tuning of the Encoder with a batch size of `32`. The smaller batch size is because the model is now larger because it contains the Encoder's gradients. With fine-tuning, the score rose to `24.29` in just about 3 epochs. Continuing training would probably have pushed the score slightly higher but I had to commit my GPU elsewhere.
 
- With [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py), I computed the correct BLEU-4 scores of this model checkpoint on the validation set without Teacher Forcing –
+An important distinction to make here is that I'm still supplying the ground-truth as the input at each decode-step during validation, _regardless of the word last generated_. This is called __Teacher Forcing__. While this is commonly used during training to speed-up the process, as we are doing, conditions during validation must mimic real inference conditions as much as possible. I haven't implemented batched inference yet – where each word in the caption is generated from the previously generated word, and terminates upon hitting the `<end>` token.
 
-Setting | Validation BLEU-4
+Since I'm teacher-forcing during validation, the BLEU score measured above on the resulting captions _does not_ reflect real performance. In fact, the BLEU score is a metric designed for comparing naturally generated captions to ground-truth captions of differing length. Once batched inference is implemented, i.e. no Teacher Forcing, early-stopping with the BLEU score will be truly 'proper'.
+
+ With this in mind, I used [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py) to compute the correct BLEU-4 scores of this model checkpoint on the validation set _without_ Teacher Forcing, at different beam sizes –
+
+Beam Size | Validation BLEU-4
 :---: | :---:
-Teacher Forcing | 24.29
-Beam Size 1 | 29.98
-Beam Size 3 | 32.95
-Beam Size 5 | 33.17
+1 | 29.98
+3 | 32.95
+5 | 33.17
 
-When fine-tuning during Transfer Learning, it's always better to use a learning rate considerably smaller than what was originally used to train the borrowed model. This is because the model is already quite optimized, and we don't want to change anything too quickly. I used `Adam()` for the Encoder as well, but with a learning rate of `1e-4`.
+This is higher than the result in the paper, and could be because of how our BLEU calculators are parameterized, the fact that I used a ResNet encoder, and actually fine-tuned the encoder – even if just a little.
+
+Also, remember – when fine-tuning during Transfer Learning, it's always better to use a learning rate considerably smaller than what was originally used to train the borrowed model. This is because the model is already quite optimized, and we don't want to change anything too quickly. I used `Adam()` for the Encoder as well, but with a learning rate of `1e-4`, which is a tenth of the default value for this optimizer.
 
 On a Titan X (Pascal), it took 55 minutes per epoch without fine-tuning, and 2.5 hours with fine-tuning at the stated batch sizes.
 
@@ -369,7 +372,7 @@ In contrast, we would actually need to feed the previously generated word to the
 
 `visualize_att()` can be used to visualize the generated caption along with the weights at each timestep as seen in the examples.
 
-Also see [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py), which implements the same process for calculating the BLEU score on the validation set, with or without Beam Search.
+Also see [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py), which implements this process for calculating the BLEU score on the validation set, with or without Beam Search.
 
 ### Some more examples
 
