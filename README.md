@@ -323,7 +323,7 @@ This means we want the model to attend to every pixel over the course of generat
 
 To evaluate the model's performance on the validation set, we will use the [BiLingual Evaluation Understudy (BLEU)](http://www.aclweb.org/anthology/P02-1040.pdf) metric. This evaluates a generated sentence to reference sentence(s). For each caption generated, we will use all `N_c` captions available for that image as the reference.
 
-The authors of the _Show, Attend and Tell_ paper observe that correlation between the loss and the BLEU score breaks down after a point, so they recommend to stop training early when the BLEU score begins to degrade, even if the loss improves.
+The authors of the _Show, Attend and Tell_ paper observe that correlation between the loss and the BLEU score breaks down after a point, so they recommend to stop training early when the BLEU score begins to degrade, even if the loss improves. (Note that we are early-stopping based on the BLEU score of teacher-forced caption generation, since we are teacher-forcing during validation for simplicity and loss comparison. However, you can use [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py) to compute BLEU scores for your model without Teacher Forcing, which is more appropriate.)
 
 I used the BLEU tool [available in the NLTK module](https://www.nltk.org/_modules/nltk/translate/bleu_score.html).
 
@@ -338,7 +338,16 @@ I trained for 20 epochs, and the BLEU score peaked at about `23.25` at the 13th 
 
 I continued from the 13th epoch checkpoint allowing fine-tuning of the Encoder with a batch size of `32`. The smaller batch size is because the model is now larger because it contains the Encoder's gradients.
 
-With fine-tuning, the score rose to `24.29` in just about 3 epochs. This is fairly close to the results in the paper, although our BLEU evaluation may be structured/parameterized differently. Continuing training would probably have pushed the score slightly higher but I had to commit my GPU elsewhere.
+With fine-tuning, the score rose to `24.29` in just about 3 epochs. Continuing training would probably have pushed the score slightly higher but I had to commit my GPU elsewhere.
+
+Using [`eval.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py), I also computed the correct BLEU-4 scores of this model checkpoint on the validation set without Teacher Forcing, which is the right way –
+
+Setting | Validation BLEU-4
+:---: | :---:
+Teacher Forcing | 24.29
+Beam Size 1 | 29.98
+Beam Size 3 | 32.95
+Beam Size 5 | 33.17
 
 When fine-tuning during Transfer Learning, it's always better to use a learning rate considerably smaller than what was originally used to train the borrowed model. This is because the model is already quite optimized, and we don't want to change anything too quickly. I used `Adam()` for the Encoder as well, but with a learning rate of `1e-4`.
 
