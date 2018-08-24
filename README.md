@@ -301,6 +301,16 @@ We also store the weights returned by the Attention network at each timestep. Yo
 
 See [`train.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/train.py).
 
+The parameters for the model (and training it) are at the beginning of the file, so you can easily check or modify them should you wish to.
+
+To train your model from scratch, simply run this file as follows –
+
+`python train.py`
+
+To train from a checkpoint, point to the corresponding file with the `checkpoint` parameter at the beginning of the code.
+
+Note that we perform validation at the end of every training epoch.
+
 ### Loss Function
 
 Since we're generating a sequence of words, we use **[`CrossEntropyLoss`](https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss)**. You only need to submit the raw scores from the final layer in the Decoder, and the loss function will perform the softmax and log operations.
@@ -366,9 +376,13 @@ Note that this checkpoint should be [loaded directly with PyTorch](https://pytor
 
 See [`caption.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/caption.py).
 
-During inference, we cannot directly use the `forward()` method in the Decoder because it uses Teacher Forcing.
+To caption an image from the command line, point to the image, model checkpoint, word map (and optionally, the beam size) as follows –
 
-In contrast, we would actually need to feed the previously generated word to the LSTM at each timestep during inference.
+`python caption.py --img='path/to/image.jpeg' --model='path/to/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar' --word_map='path/to/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json' --beam_size=5`
+
+Alternatively, use the functions in the file as needed.
+
+Remember, during inference, we _cannot_ directly use the `forward()` method in the Decoder because it uses Teacher Forcing. Rather, we would actually need to feed the previously generated word to the LSTM at each timestep.
 
 `caption_image_beam_search()` reads an image, encodes it, and applies the layers in the Decoder in the correct order, while using the previously generated word as the input to the LSTM at each timestep. It also incorporates Beam Search.
 
