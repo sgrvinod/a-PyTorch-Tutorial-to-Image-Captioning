@@ -303,11 +303,11 @@ See [`train.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Caption
 
 The parameters for the model (and training it) are at the beginning of the file, so you can easily check or modify them should you wish to.
 
-**To train your model from scratch**, simply run this file as follows –
+To **train your model from scratch**, simply run this file as follows –
 
 `python train.py`
 
-**To resume training at a checkpoint**, point to the corresponding file with the `checkpoint` parameter at the beginning of the code.
+To **resume training at a checkpoint**, point to the corresponding file with the `checkpoint` parameter at the beginning of the code.
 
 Note that we perform validation at the end of every training epoch.
 
@@ -376,7 +376,7 @@ Note that this checkpoint should be [loaded directly with PyTorch](https://pytor
 
 See [`caption.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/caption.py).
 
-**To caption an image**, point to the image, model checkpoint, word map (and optionally, the beam size) as follows –
+To **caption an image**, point to the image, model checkpoint, word map (and optionally, the beam size) as follows –
 
 `python caption.py --img='path/to/image.jpeg' --model='path/to/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar' --word_map='path/to/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json' --beam_size=5`
 
