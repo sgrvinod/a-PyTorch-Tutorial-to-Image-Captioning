@@ -34,7 +34,7 @@ In the interest of keeping things simple, let's implement the [_Show, Attend, an
 
 This model learns _where_ to look.
 
-As you generate a caption, word by word, you can see the the model's gaze shifting across the image.
+As you generate a caption, word by word, you can see the model's gaze shifting across the image.
 
 This is possible because of its _Attention_ mechanism, which allows it to focus on the part of the image most relevant to the word it is going to utter next.
 
@@ -72,9 +72,9 @@ There are more examples at the [end of the tutorial](https://github.com/sgrvinod
 
 # Concepts
 
-* **Image captioning**. Well, duh.
+* **Image captioning**. duh.
 
-* **Encoder-Decoder architecture**. Any model that generates sequences will use an Encoder to encode the input into a fixed form and a Decoder to decode it, word by word, into a sequence.
+* **Encoder-Decoder architecture**. Typically, a model that generates sequences will use an Encoder to encode the input into a fixed form and a Decoder to decode it, word by word, into a sequence.
 
 * **Attention**. The use of Attention networks is widespread in deep learning, and with good reason. This is a way for a model to choose only those parts of the encoding that it thinks is relevant to the task at hand. The same mechanism you see employed here can be used in any model where the Encoder's output has multiple points in space or time. In image captioning, you consider some pixels more important than others. In sequence to sequence tasks like machine translation, you consider some words more important than others.
 
@@ -98,7 +98,7 @@ We don't need to train an encoder from scratch. Why? Because there are already C
 
 For years, people have been building models that are extraordinarily good at classifying an image into one of a thousand categories. It stands to reason that these models capture the essence of an image very well.
 
-I have chosen to use the **101 layered Residual Network trained on the ImageNet classification task**, available in PyTorch. As stated earlier, this is an example of Transfer Learning. You have the option of fine-tuning it to improve performance.
+I have chosen to use the **101 layered Residual Network trained on the ImageNet classification task**, already available in PyTorch. As stated earlier, this is an example of Transfer Learning. You have the option of fine-tuning it to improve performance.
 
 ![ResNet Encoder](./img/encoder.png)
 
@@ -116,7 +116,7 @@ In a typical setting without Attention, you could simply average the encoded ima
 
 ![Decoder without Attention](./img/decoder_no_att.png)
 
-In a setting _with_ Attention, we want the Decoder to be able to **look at different parts of the image at different points in the sequence**. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on the – you guessed it – football!
+In a setting _with_ Attention, we want the Decoder to be able to **look at different parts of the image at different points in the sequence**. For example, while generating the word `football` in `a man holds a football`, the Decoder would know to focus on – you guessed it – the football!
 
 ![Decoding with Attention](./img/decoder_att.png)
 
@@ -124,9 +124,9 @@ Instead of the simple average, we use the _weighted_ average across all pixels, 
 
 ### Attention
 
-The Attention network **computes the weights**.
+The Attention network **computes these weights**.
 
-Intuitively, how would you estimate the importance of a certain part of an image? You would need to be aware of the sequence you have generated _thus far_, so you can look at the image and decide what needs describing next. For example, after you mention `a man`, it is logical to declare that he is `holding a football`.
+Intuitively, how would you estimate the importance of a certain part of an image? You would need to be aware of the sequence you have generated _so far_, so you can look at the image and decide what needs describing next. For example, after you mention `a man`, it is logical to declare that he is `holding a football`.
 
 This is exactly what the Attention mechanism does – it considers the sequence generated thus far, and _attends_ to the part of the image that needs describing next.
 
@@ -149,13 +149,13 @@ It might be clear by now what our combined network looks like.
 - Once the Encoder generates the encoded image, we transform the encoding to create the initial hidden state `h` (and cell state `C`) for the LSTM Decoder.
 - At each decode step,
   - the encoded image and the previous hidden state is used to generate weights for each pixel in the Attention network.
-  - the weighted average of the encoding and the previously generated word is fed to the LSTM Decoder to generate the next word.
+  - the previously generated word and the weighted average of the encoding are fed to the LSTM Decoder to generate the next word.
 
 ### Beam Search
 
 We use a linear layer to transform the Decoder's output into a score for each word in the vocabulary.
 
-The straightforward – and quite greedy – option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. And it's not just the first word – each word in the sequence has consequences for the ones that succeed it.
+The straightforward – and greedy – option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. And it's not just the first word – each word in the sequence has consequences for the ones that succeed it.
 
 It might very well happen that if you'd chosen the _third_ best word at that first step, and the _second_ best word at the second step, and so on... _that_ would be the best sequence you could generate.
 
