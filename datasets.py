@@ -12,7 +12,6 @@ class CaptionDataset(Dataset):
 
     def __init__(self, data_folder, data_name, split, transform=None):
         """
-
         :param data_folder: folder where data files are stored
         :param data_name: base name of processed datasets
         :param split: split, one of 'TRAIN', 'VAL', or 'TEST'
