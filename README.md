@@ -428,7 +428,7 @@ Yes, the _Show, Attend and Tell_ paper uses both variants, and the Decoder with 
 
 In _soft_ attention, which we use here, you're computing the weights and using the weighted average of the features across all pixels. This is a deterministic, differentiable operation.
 
-In _hard_ attention, you are choosing to just sample some pixels and this choice is made in a way that is difficult to represent as a differentiable function of its inputs, which complicates computing gradients during back-propagation. This is a stochastic operation.
+In _hard_ attention, you are choosing to just sample some pixels and any such probabilistic sampling is non-deterministic or _stochastic_, i.e. a specific input will not always produce the same output. However, gradient descent presupposes that the network is deterministic and therefore differentiable. To address this, a common workaround is applied, where the sampling network is reparameterized to remove its "stochasticity". Note that I haven't implemented this, and my knowledge of it is fairly superficial at this point – I'll update this answer soon.
 
 ---
 
