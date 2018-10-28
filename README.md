@@ -426,9 +426,9 @@ __You said__ ___soft___ __attention. Is there, um, a__ ___hard___ __attention?__
 
 Yes, the _Show, Attend and Tell_ paper uses both variants, and the Decoder with "hard" attention performs marginally better.
 
-In _soft_ attention, which we use here, you're computing the weights and using the weighted average of the features across all pixels. This is a deterministic, differentiable operation.
+In _soft_ attention, which we use here, you're computing the weights `alpha` and using the weighted average of the features across all pixels. This is a deterministic, differentiable operation.
 
-In _hard_ attention, you are choosing to just sample some pixels and any such probabilistic sampling is non-deterministic or _stochastic_, i.e. a specific input will not always produce the same output. However, gradient descent presupposes that the network is deterministic and therefore differentiable. To address this, a common workaround is applied, where the sampling network is reparameterized to remove its "stochasticity". Note that I haven't implemented this, and my knowledge of it is fairly superficial at this point – I'll update this answer soon.
+In _hard_ attention, you are choosing to just sample some pixels from a distribution defined by `alpha`. Note that any such probabilistic sampling is non-deterministic or _stochastic_, i.e. a specific input will not always produce the same output. But since gradient descent presupposes that the network is deterministic (and therefore differentiable), the sampling is reworked to remove its stochasticity. My knowledge of this is fairly superficial at this point – I will update this answer when I have a more detailed understanding.
 
 ---
 
