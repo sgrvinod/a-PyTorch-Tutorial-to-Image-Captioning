@@ -10,6 +10,12 @@ Questions, suggestions, or corrections can be posted as issues.
 
 I'm using `PyTorch 0.4` in `Python 3.6`.
 
+---
+
+**27 Feb 2019**: [a PyTorch Tutorial to Object Detection](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection) is now complete.
+
+---
+
 # Contents
 
 [***Objective***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#objective)
