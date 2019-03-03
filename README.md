@@ -305,8 +305,7 @@ We also store the weights returned by the Attention network at each timestep. Yo
 
 # Training
 
-Before you begin, make sure to save the required data files for training and validation. To do this, run the contents of [`create_input_files.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/create_input_files.py) after pointing it to the folders and Karpathy JSON file in your [downloaded data](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#dataset).
-
+Before you begin, make sure to save the [required data files](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#data-pipeline) for training, validation, and testing. To do this, run the contents of [`create_input_files.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/create_input_files.py) after pointing it to the the Karpathy JSON file and the image folder containing the extracted `train2014` and `val2014` folders from your [downloaded data](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning#dataset).
 
 See [`train.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/train.py).
 
