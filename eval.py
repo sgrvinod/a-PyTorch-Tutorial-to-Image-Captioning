@@ -168,7 +168,7 @@ def evaluate(beam_size):
         assert len(references) == len(hypotheses)
 
     # Calculate BLEU-4 scores
-    bleu4 = corpus_bleu(references, hypotheses, emulate_multibleu=True)
+    bleu4 = corpus_bleu(references, hypotheses)
 
     return bleu4
 
