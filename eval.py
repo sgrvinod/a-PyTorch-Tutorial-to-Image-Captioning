@@ -49,7 +49,7 @@ def evaluate(beam_size):
         batch_size=1, shuffle=True, num_workers=1, pin_memory=True)
 
     # TODO: Batched Beam Search
-    # Therefore, do not use a batch_size greater than 1 during evaluation - IMPORTANT
+    # Therefore, do not use a batch_size greater than 1 - IMPORTANT!
 
     # Lists to store references (true captions), and hypothesis (prediction) for each image
     # If for n images, we have n hypotheses, and references a, b, c... for each image, we need -
