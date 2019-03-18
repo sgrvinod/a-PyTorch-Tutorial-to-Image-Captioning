@@ -484,7 +484,7 @@ decoder.load_pretrained_embeddings(pretrained_embeddings)  # pretrained_embeddin
 decoder.fine_tune_embeddings(True)  # or False
 ```
   
-Also make sure to change the `emb_dim` parameter to the size of your pre-trained embeddings. This should automatically adjust the input size of the decoder LSTM to accomodate them.
+Also make sure to change the `emb_dim` parameter from its current value of `512` to the size of your pre-trained embeddings. This should automatically adjust the input size of the decoder LSTM to accomodate them.
 
 ---
 
