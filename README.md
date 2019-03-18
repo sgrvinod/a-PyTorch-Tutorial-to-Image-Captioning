@@ -486,4 +486,4 @@ With the release of PyTorch `0.4`, wrapping tensors as `Variable`s is no longer 
 
 __How do I compute all BLEU (i.e. BLEU-1 to BLEU-4) scores during evaluation?__
 
-You'd need to modify the code in [eval.py](<https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py#L171>) to do this. Please see [this excellent answer](<https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/issues/37#issuecomment-455924998>) by [kmario23](<https://github.com/kmario23>) for a detailed explanation.
+You'd need to modify the code in [eval.py](<https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py#L171>) to do this. Please see [this excellent answer](<https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/issues/37#issuecomment-455924998>) by [kmario23](<https://github.com/kmario23>) for a clear and detailed explanation.
