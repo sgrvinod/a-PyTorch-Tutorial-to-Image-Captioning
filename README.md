@@ -339,13 +339,13 @@ This means we want the model to attend to every pixel over the course of generat
 
 ### Early stopping with BLEU
 
-To evaluate the model's performance on the validation set, we will use the [BiLingual Evaluation Understudy (BLEU)](http://www.aclweb.org/anthology/P02-1040.pdf) metric. This evaluates a generated sentence to reference sentence(s). For each caption generated, we will use all `N_c` captions available for that image as the reference.
+To evaluate the model's performance on the validation set, we will use the automated evaluation metric: [BiLingual Evaluation Understudy (BLEU)](http://www.aclweb.org/anthology/P02-1040.pdf). This evaluates a generated caption against reference captions(s). For each generated caption, we will use all `N_c` captions available for that image as the reference captions.
 
-The authors of the _Show, Attend and Tell_ paper observe that correlation between the loss and the BLEU score breaks down after a point, so they recommend to stop training early when the BLEU score begins to degrade, even if the loss improves.
+The authors of the _Show, Attend and Tell_ paper observe that correlation between the loss and the BLEU score breaks down after a point, so they recommend to stop training early on when the BLEU score begins to degrade, even if the loss is on decreasing trend.
 
 I used the BLEU tool [available in the NLTK module](https://www.nltk.org/_modules/nltk/translate/bleu_score.html).
 
-Note that there is considerable criticism of the BLEU score because it is not always reliable. The authors also report the METEOR scores for this reason, but I haven't implemented this metric.
+Note that there is considerable criticism of the BLEU score because it doesn't correlate well with human judgments. The authors also report the METEOR scores for this reason, but I haven't implemented this metric.
 
 ### Remarks
 
@@ -481,3 +481,9 @@ With the release of PyTorch `0.4`, wrapping tensors as `Variable`s is no longer 
 - By default, when you create a tensor from scratch, `requires_grad` will be set to `False`.
 - When a tensor is created from or modified using another tensor that allows gradients, then `requires_grad` will be set to `True`.
 - Tensors which are parameters of `torch.nn` layers will already have `requires_grad` set to `True`.
+
+
+
+__How to compute all BLEU (i.e. BLEU-1 to BLEU-4) scores during evaluation?__
+
+For this you've to adapt the [eval.py script](<https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/blob/master/eval.py#L171>). Please see the answer by [kmario23](<https://github.com/kmario23>) on [How to calculate all bleu scores (issues #37)](<https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning/issues/37#issuecomment-455924998>) for a clear explanation of how to do this.
