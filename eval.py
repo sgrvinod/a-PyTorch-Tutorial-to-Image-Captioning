@@ -11,7 +11,7 @@ from tqdm import tqdm
 from evalfunc.bleu.bleu import Bleu
 from evalfunc.rouge.rouge import Rouge
 from evalfunc.cider.cider import Cider
-from evalfunc.meteor.meteor import Meteo
+from evalfunc.meteor.meteor import Meteor
 
 # Parameters
 data_folder = '/media/ssd/caption data'  # folder with data files saved by create_input_files.py
