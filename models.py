@@ -85,13 +85,19 @@ class Attention(nn.Module):
 
         return attention_weighted_encoding, alpha
 
+def LSTMCell(input_size, hidden_size, **kwargs):
+    m = nn.LSTMCell(input_size, hidden_size, **kwargs)
+    for name, param in m.named_parameters():
+        if 'weight' in name or 'bias' in name:
+            param.data.uniform_(-0.1, 0.1)
+    return m
 
 class DecoderWithAttention(nn.Module):
     """
     Decoder.
     """
 
-    def __init__(self, attention_dim, embed_dim, decoder_dim, vocab_size, encoder_dim=2048, dropout=0.5):
+    def __init__(self, attention_dim, embed_dim, decoder_dim, vocab_size, encoder_dim=2048, dropout=0.5, num_layers = 2):
         """
         :param attention_dim: size of attention network
         :param embed_dim: embedding size
@@ -108,12 +114,13 @@ class DecoderWithAttention(nn.Module):
         self.decoder_dim = decoder_dim
         self.vocab_size = vocab_size
         self.dropout = dropout
-
+        self.num_layers = num_layers
+        
         self.attention = Attention(encoder_dim, decoder_dim, attention_dim)  # attention network
 
         self.embedding = nn.Embedding(vocab_size, embed_dim)  # embedding layer
         self.dropout = nn.Dropout(p=self.dropout)
-        self.decode_step = nn.LSTMCell(embed_dim + encoder_dim, decoder_dim, bias=True)  # decoding LSTMCell
+        self.decode_step = nn.ModuleList([LSTMCell(embed_dim  + encoder_dim if layer == 0 else embed_dim, embed_dim) for layer in range(self.num_layers)]) # decoding LSTMCell
         self.init_h = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial hidden state of LSTMCell
         self.init_c = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial cell state of LSTMCell
         self.f_beta = nn.Linear(decoder_dim, encoder_dim)  # linear layer to create a sigmoid-activated gate
@@ -154,8 +161,9 @@ class DecoderWithAttention(nn.Module):
         :return: hidden state, cell state
         """
         mean_encoder_out = encoder_out.mean(dim=1)
-        h = self.init_h(mean_encoder_out)  # (batch_size, decoder_dim)
-        c = self.init_c(mean_encoder_out)
+        h = [self.init_h(mean_encoder_out) for i in range(self.num_layers)]  # (batch_size, decoder_dim)
+        c = [self.init_c(mean_encoder_out) for i in range(self.num_layers)]
+
         return h, c
 
     def forward(self, encoder_out, encoded_captions, caption_lengths):
@@ -184,8 +192,8 @@ class DecoderWithAttention(nn.Module):
         # Embedding
         embeddings = self.embedding(encoded_captions)  # (batch_size, max_caption_length, embed_dim)
 
-        # Initialize LSTM state
-        h, c = self.init_hidden_state(encoder_out)  # (batch_size, decoder_dim)
+        # Initialize LSTM state, initialize cell_vector and hidden_vector
+        prev_h, prev_c = self.init_hidden_state(encoder_out)  # (batch_size, decoder_dim)
 
         # We won't decode at the <end> position, since we've finished generating as soon as we generate <end>
         # So, decoding lengths are actual lengths - 1
@@ -201,12 +209,22 @@ class DecoderWithAttention(nn.Module):
         for t in range(max(decode_lengths)):
             batch_size_t = sum([l > t for l in decode_lengths])
             attention_weighted_encoding, alpha = self.attention(encoder_out[:batch_size_t],
-                                                                h[:batch_size_t])
-            gate = self.sigmoid(self.f_beta(h[:batch_size_t]))  # gating scalar, (batch_size_t, encoder_dim)
+                                                                prev_h[-1][:batch_size_t])
+            gate = self.sigmoid(self.f_beta(prev_h[-1][:batch_size_t]))  # gating scalar, (batch_size_t, encoder_dim)
             attention_weighted_encoding = gate * attention_weighted_encoding
-            h, c = self.decode_step(
-                torch.cat([embeddings[:batch_size_t, t, :], attention_weighted_encoding], dim=1),
-                (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
+            
+            input = torch.cat([embeddings[:batch_size_t, t, :], attention_weighted_encoding], dim=1)
+            for i, rnn in enumerate(self.decode_step):
+                # recurrent cell
+                h, c = rnn(input, (prev_h[i][:batch_size_t], prev_c[i][:batch_size_t])) # cell_vector and hidden_vector
+                
+                # hidden state becomes the input to the next layer
+                input = self.dropout(h)
+                
+                # save state for next time step
+                prev_h[i] = h
+                prev_c[i] = c
+                
             preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
             predictions[:batch_size_t, t, :] = preds
             alphas[:batch_size_t, t, :] = alpha
