@@ -7,6 +7,11 @@ from utils import *
 from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
+#socre evaluation packages from COCO.api
+from evalfunc.bleu.bleu import Bleu
+from evalfunc.rouge.rouge import Rouge
+from evalfunc.cider.cider import Cider
+from evalfunc.meteor.meteor import Meteor
 
 # Parameters
 data_folder = '/media/ssd/caption data'  # folder with data files saved by create_input_files.py
@@ -168,12 +173,31 @@ def evaluate(beam_size):
 
         assert len(references) == len(hypotheses)
 
-    # Calculate BLEU-4 scores
-    bleu4 = corpus_bleu(references, hypotheses)
+    # Calculate BLEU & CIDEr & METEOR & ROUGE scores
+    scorers = [
+        (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
+        (Cider(), "CIDEr"),
+        (Meteor(), "METEOR"),
+        (Rouge(), "ROUGE_L")
+    ]
 
-    return bleu4
+    hypo = [[' '.join(hypo)] for hypo in [[str(x) for x in hypo] for hypo in hypotheses]]
+    ref = [[' '.join(reft) for reft in reftmp] for reftmp in [[[str(x) for x in reft] for reft in reftmp]for reftmp in references]]
+    
+    score = []
+    method = []
+    for scorer, method_i in scorers:
+        score_i, scores_i = scorer.compute_score(ref, hypo)
+        score.extend(score_i) if isinstance(score_i, list) else score.append(score_i)
+        method.extend(method_i) if isinstance(method_i, list) else method.append(method_i)
+    score_dict = dict(zip(method,  score))
+     
+    return score_dict
 
 
 if __name__ == '__main__':
     beam_size = 1
-    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, evaluate(beam_size)))
+    score_dict = evaluate(beam_size)
+    for method, score in score_dict.items():
+        print('%s:  %.4f' % (method, score))
+        print("\n%s score @ beam size of %d is %.4f." % (method, beam_size, score))
