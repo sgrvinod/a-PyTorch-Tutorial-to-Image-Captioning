@@ -100,14 +100,21 @@ def evaluate(beam_size):
 
             embeddings = decoder.embedding(k_prev_words).squeeze(1)  # (s, embed_dim)
 
-            awe, _ = decoder.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
+            awe, _ = decoder.attention(encoder_out, h[-1])  # (s, encoder_dim), (s, num_pixels)
 
-            gate = decoder.sigmoid(decoder.f_beta(h))  # gating scalar, (s, encoder_dim)
+            gate = decoder.sigmoid(decoder.f_beta(h[-1]))  # gating scalar, (s, encoder_dim)
             awe = gate * awe
 
-            h, c = decoder.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (s, decoder_dim)
+            input = torch.cat([embeddings, awe], dim=1)
+            for j, rnn in enumerate(decoder.decode_step):
+                #print(input.shape, input)
+                at_h, at_c = rnn(input, (h[j], c[j]))  # (s, decoder_dim)
+                input = decoder.dropout(at_h)
+                h[j] = at_h
+                c[j] = at_c
 
-            scores = decoder.fc(h)  # (s, vocab_size)
+            scores = decoder.fc(h[-1])  # (s, vocab_size)
+
             scores = F.log_softmax(scores, dim=1)
 
             # Add
@@ -142,8 +149,9 @@ def evaluate(beam_size):
             if k == 0:
                 break
             seqs = seqs[incomplete_inds]
-            h = h[prev_word_inds[incomplete_inds]]
-            c = c[prev_word_inds[incomplete_inds]]
+            for j in range(len(h)):
+                h[j] = h[j][prev_word_inds[incomplete_inds]]
+                c[j] = c[j][prev_word_inds[incomplete_inds]]
             encoder_out = encoder_out[prev_word_inds[incomplete_inds]]
             top_k_scores = top_k_scores[incomplete_inds].unsqueeze(1)
             k_prev_words = next_word_inds[incomplete_inds].unsqueeze(1)
@@ -153,8 +161,8 @@ def evaluate(beam_size):
                 break
             step += 1
 
-        i = complete_seqs_scores.index(max(complete_seqs_scores))
-        seq = complete_seqs[i]
+        j = complete_seqs_scores.index(max(complete_seqs_scores))
+        seq = complete_seqs[j]
 
         # References
         img_caps = allcaps[0].tolist()
