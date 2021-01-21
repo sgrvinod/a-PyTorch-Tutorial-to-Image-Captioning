@@ -163,14 +163,17 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
     image = image.resize([14 * 24, 14 * 24], Image.LANCZOS)
 
     words = [rev_word_map[ind] for ind in seq]
-
+    
+    #added to make plots bigger
+    plt.rcParams['figure.figsize'] = [10, 10]
+    plt.rcParams['figure.dpi'] = 100
     for t in range(len(words)):
         if t > 50:
             break
         plt.subplot(np.ceil(len(words) / 5.), 5, t + 1)
 
         plt.text(0, 1, '%s' % (words[t]), color='black', backgroundcolor='white', fontsize=12)
-        plt.imshow(image)
+        plt.imshow(image, aspect='auto')
         current_alpha = alphas[t, :]
         if smooth:
             alpha = skimage.transform.pyramid_expand(current_alpha.numpy(), upscale=24, sigma=8)
