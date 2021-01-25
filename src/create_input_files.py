@@ -1,13 +1,14 @@
 from utils import create_input_files
+import json
 
 if __name__ == '__main__':
     # Create input files (along with word map)
-    create_input_files(dataset='coco',
-                       karpathy_json_path='../../personal_afosado/splits/dataset_coco.json',
-                       image_folder='/datasets/COCO-2015',
-                       captions_per_image=5,
-                       min_word_freq=5,
-                       output_folder='../../personal_afosado/data/out',
-                       max_len=50)
-
-#     image folder and output folder need to be the same??
+    f = open("../config/create_input_files.json")
+    jsonread = json.load(f) 
+    create_input_files(dataset=jsonread['dataset'],
+                       karpathy_json_path=jsonread['karpathy_json_path'],
+                       image_folder=jsonread['image_folder'],
+                       captions_per_image=jsonread['captions_per_image'],
+                       min_word_freq=jsonread['min_word_freq'],
+                       output_folder=jsonread['output_folder'],
+                       max_len=jsonread['max_len'],)

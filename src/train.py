@@ -1,4 +1,5 @@
 import time
+import json
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
@@ -10,9 +11,12 @@ from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
 
+
+f = open('../config/train.json')
+jsonread = json.load(f) 
 # Data parameters
-data_folder = '../../personal_afosado/data/out'  # folder with data files saved by create_input_files.py
-data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
+data_folder = jsonread['data_folder']  # folder with data files saved by create_input_files.py
+data_name = jsonread['data_name']  # base name shared by data files
 
 # Model parameters
 emb_dim = 512  # dimension of word embeddings
@@ -35,7 +39,7 @@ alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as i
 best_bleu4 = 0.  # BLEU-4 score right now
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
-checkpoint = '../../personal_afosado/models/checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
+checkpoint = jsonread['checkpoint']  # path to checkpoint, None if none
 
 #TODO implement code to try to load checkpoint if fails then start from beginning
 

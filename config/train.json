@@ -1,0 +1,5 @@
+{
+    "data_folder": "../../personal_afosado/data/out",
+    "data_name": "coco_5_cap_per_img_5_min_word_freq",
+    "checkpoint": "../../personal_afosado/models/checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar"
+}
