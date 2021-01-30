@@ -1,7 +1,7 @@
 {
-    "data_folder": "../../personal_afosado/data/out",
+    "data_folder": "../personal_afosado/data/out",
     "data_name": "coco_5_cap_per_img_5_min_word_freq",
-    "checkpoint": "../../personal_afosado/models/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar",
-    "word_map_file": "../../personal_afosado/data/out/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json",
+    "checkpoint": "../personal_afosado/models/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar",
+    "word_map_file": "../personal_afosado/data/out/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json",
     "beam_size": 1
 }

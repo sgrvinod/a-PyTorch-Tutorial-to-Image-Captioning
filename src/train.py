@@ -1,5 +1,7 @@
 import time
 import json
+import sys
+sys.path.append('src')
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
@@ -11,11 +13,16 @@ from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
 
-
-f = open('../config/train.json')
+root = None
+try:
+    f = open('../config/train.json')
+    root = '../'
+except:
+    f = open('config/train.json')
+    root = ''
 jsonread = json.load(f) 
 # Data parameters
-data_folder = jsonread['data_folder']  # folder with data files saved by create_input_files.py
+data_folder = root+jsonread['data_folder']  # folder with data files saved by create_input_files.py
 data_name = jsonread['data_name']  # base name shared by data files
 
 # Model parameters
@@ -39,7 +46,7 @@ alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as i
 best_bleu4 = 0.  # BLEU-4 score right now
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
-checkpoint = jsonread['checkpoint']  # path to checkpoint, None if none
+checkpoint = root+jsonread['checkpoint']  # path to checkpoint, None if none
 
 #TODO implement code to try to load checkpoint if fails then start from beginning
 

@@ -1,6 +1,6 @@
 {
-    "model_fp":"../../personal_afosado/models/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar",
-    "wordmap_fp":"../../personal_afosado/data/out/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json",
+    "model_fp":"../personal_afosado/models/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar",
+    "wordmap_fp":"../personal_afosado/data/out/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json",
     "img_fp":"/datasets/COCO-2015/train2014/COCO_train2014_000000000110.jpg",
     "beam_size":5,
     "smooth": true

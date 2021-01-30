@@ -200,12 +200,12 @@ if __name__ == '__main__':
 #     parser.add_argument('--dont_smooth', dest='smooth', action='store_false', help='do not smooth alpha overlay')
 
 #     args = parser.parse_args()
-
-    f = open('../config/caption.json')
+    root = '../'
+    f = open(root+'config/caption.json')
     jsonread = json.load(f) 
 
     # Load model
-    checkpoint = torch.load(jsonread['model_fp'], map_location=str(device))
+    checkpoint = torch.load(root+jsonread['model_fp'], map_location=str(device))
     decoder = checkpoint['decoder']
     decoder = decoder.to(device)
     decoder.eval()
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     encoder.eval()
 
     # Load word map (word2ix)
-    with open(jsonread['wordmap_fp'], 'r') as j:
+    with open(root+jsonread['wordmap_fp'], 'r') as j:
         word_map = json.load(j)
     rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
 

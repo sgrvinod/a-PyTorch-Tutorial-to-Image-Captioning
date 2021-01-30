@@ -1,22 +1,26 @@
+import json
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
-import json
 from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
-
-
-f = open('../config/eval.json')
+root = None
+try:
+    f = open('../config/eval.json')
+    root = '../'
+except:
+    f = open('config/eval.json')
+    root = ''
 jsonread = json.load(f) 
 # Parameters
-data_folder = jsonread['data_folder']  # folder with data files saved by create_input_files.py
+data_folder = root+jsonread['data_folder']  # folder with data files saved by create_input_files.py
 data_name = jsonread['data_name']  # base name shared by data files
-checkpoint = jsonread['checkpoint']
-word_map_file = jsonread['word_map_file']  # word map, ensure it's the same the data was encoded with and the model was trained with
+checkpoint = root+jsonread['checkpoint']
+word_map_file = root+jsonread['word_map_file']  # word map, ensure it's the same the data was encoded with and the model was trained with
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
 

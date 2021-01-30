@@ -1,9 +1,9 @@
 {
     "dataset": "coco",
-    "karpathy_json_path": "../../personal_afosado/splits/dataset_coco.json",
+    "karpathy_json_path": "../personal_afosado/splits/dataset_coco.json",
     "image_folder": "/datasets/COCO-2015",
     "captions_per_image":5,
     "min_word_freq":5,
-    "output_folder":"../../personal_afosado/data/out",
+    "output_folder":"../personal_afosado/data/out",
     "max_len":50
 }
