@@ -44,14 +44,44 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def evaluate(beam_size):
+def evaluate(beam_size, test=False):
     """
     Evaluation
 
     :param beam_size: beam size at which to generate captions for evaluation
     :return: BLEU-4 score
     """
-    # DataLoader
+    if test:
+        f = open('config/eval_test.json')
+        jsonread = json.load(f) 
+        # Parameters
+        data_folder = jsonread['data_folder']  # folder with data files saved by create_input_files.py
+        data_name = jsonread['data_name']  # base name shared by data files
+        checkpoint = jsonread['checkpoint']
+        word_map_file = jsonread['word_map_file']  # word map, ensure it's the same the data was encoded with and the model was trained with
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
+        cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
+
+        # Load model
+        checkpoint = torch.load(checkpoint)
+        decoder = checkpoint['decoder']
+        decoder = decoder.to(device)
+        decoder.eval()
+        encoder = checkpoint['encoder']
+        encoder = encoder.to(device)
+        encoder.eval()
+
+        # Load word map (word2ix)
+        with open(word_map_file, 'r') as j:
+            word_map = json.load(j)
+        rev_word_map = {v: k for k, v in word_map.items()}
+        vocab_size = len(word_map)
+
+        # Normalization transform
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+
+            # DataLoader
     loader = torch.utils.data.DataLoader(
         CaptionDataset(data_folder, data_name, 'TEST', transform=transforms.Compose([normalize])),
         batch_size=1, shuffle=True, num_workers=1, pin_memory=True)

@@ -6,9 +6,12 @@ from src.train import main
 from src.eval import evaluate
 from src.caption import caption_image_beam_search, visualize_att
 
-def data():
+def data(test=False):
     root = ''
-    f = open(root+"config/create_input_files.json")
+    if test:
+        f = open(root+"config/create_input_files_test.json")
+    else:
+        f = open(root+"config/create_input_files.json")
     jsonread = json.load(f) 
     create_input_files(dataset=jsonread['dataset'],
                        karpathy_json_path=root+jsonread['karpathy_json_path'],
@@ -18,17 +21,23 @@ def data():
                        output_folder=root+jsonread['output_folder'],
                        max_len=jsonread['max_len'],)
     
-def train():
-    main()
+def train(test=False):
+    main(test)
     
-def evaluate_model():
-    f = open('config/eval.json')
+def evaluate_model(test=False):
+    if test:
+        f = open('config/eval_test.json')
+    else:
+        f = open('config/eval.json')
     jsonread = json.load(f)
     beam_size = jsonread['beam_size']
-    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, evaluate(beam_size)))
+    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, evaluate(beam_size, test)))
     
-def generate_viz():
-    f = open('config/caption.json')
+def generate_viz(test=False):
+    if test:
+        f = open('config/caption_test.json')
+    else:
+        f = open('config/caption.json')
     jsonread = json.load(f) 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -59,8 +68,11 @@ def all():
     evaluate_model()
     generate_viz()
     
-# def test():
-    
+def test():
+    data(True)
+    train(True)
+    evaluate_model(True)
+    generate_viz(True)
 
 if __name__ == '__main__':
     try:

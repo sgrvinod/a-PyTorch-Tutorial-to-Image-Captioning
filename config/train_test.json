@@ -1,0 +1,5 @@
+{
+    "data_folder": "test/testdata/out_images",
+    "data_name": "coco_5_cap_per_img_5_min_word_freq",
+    "checkpoint": null
+}

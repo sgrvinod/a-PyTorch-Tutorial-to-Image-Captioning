@@ -206,7 +206,7 @@ def clip_gradient(optimizer, grad_clip):
 
 
 def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer, decoder_optimizer,
-                    bleu4, is_best):
+                    bleu4, is_best, test):
     """
     Saves model checkpoint.
 
@@ -228,7 +228,10 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
              'encoder_optimizer': encoder_optimizer,
              'decoder_optimizer': decoder_optimizer}
     #added this
-    root = '../../personal_afosado/models/'
+    if test:
+        root = 'test/models/'
+    else:    
+        root = '../../personal_afosado/models/'
     
     filename = root + 'checkpoint_' + data_name + '.pth.tar'
     torch.save(state, filename)
