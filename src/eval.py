@@ -190,9 +190,13 @@ def evaluate(beam_size, test=False):
             if step > 50:
                 break
             step += 1
-
-        i = complete_seqs_scores.index(max(complete_seqs_scores))
-        seq = complete_seqs[i]
+        
+        #for test data
+        if not complete_seqs_scores:
+            seq = []
+        else:
+            i = complete_seqs_scores.index(max(complete_seqs_scores))
+            seq = complete_seqs[i]
 
         # References
         img_caps = allcaps[0].tolist()

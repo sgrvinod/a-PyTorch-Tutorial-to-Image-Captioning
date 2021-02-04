@@ -61,7 +61,7 @@ def main(test=False):
         data_folder = jsonread['data_folder']  # folder with data files saved by create_input_files.py
         data_name = jsonread['data_name']
         checkpoint = jsonread['checkpoint']
-        epochs = 5
+        epochs = 1
     
     # Read word map
     word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
