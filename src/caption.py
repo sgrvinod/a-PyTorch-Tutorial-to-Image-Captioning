@@ -139,10 +139,13 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
         if step > 50:
             break
         step += 1
-
-    i = complete_seqs_scores.index(max(complete_seqs_scores))
-    seq = complete_seqs[i]
-    alphas = complete_seqs_alpha[i]
+    if not complete_seqs_scores:
+        seq = []
+        alphas = []
+    else:
+        i = complete_seqs_scores.index(max(complete_seqs_scores))
+        seq = complete_seqs[i]
+        alphas = complete_seqs_alpha[i]
 
     return seq, alphas
 
@@ -163,6 +166,9 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
     image = image.resize([14 * 24, 14 * 24], Image.LANCZOS)
 
     words = [rev_word_map[ind] for ind in seq]
+    #for test data
+    if not words:
+        words = ['<start>', '<end>']
     
     #added to make plots bigger
     plt.rcParams['figure.figsize'] = [10, 10]
