@@ -167,9 +167,10 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
 
     words = [rev_word_map[ind] for ind in seq]
     #for test data
-    if not words:
+    if words is []:
         words = ['<start>', '<end>']
-    
+    if alphas is []:
+        alphas = torch.from_numpy(np.zeros((2,14,14)))
     #added to make plots bigger
     plt.rcParams['figure.figsize'] = [10, 10]
     plt.rcParams['figure.dpi'] = 100
