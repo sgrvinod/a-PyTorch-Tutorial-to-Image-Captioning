@@ -8,6 +8,8 @@ import matplotlib.cm as cm
 import skimage.transform
 import argparse
 from scipy.misc import imread, imresize
+# from skimage.transform import resize
+# from skimage.io import imread
 from PIL import Image
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -59,7 +61,8 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
     k_prev_words = torch.LongTensor([[word_map['<start>']]] * k).to(device)  # (k, 1)
 
     # Tensor to store top k sequences; now they're just <start>
-    seqs = k_prev_words  # (k, 1)
+    seqs = k_prev_words  # (k, 1)@Jordan Levy i think just running this with the new images generated will be enough you don't have to really understand the code but if you read the beam search section in the readme and look through the caption.py file you should be able to understand it
+
 
     # Tensor to store top k sequences' scores; now they're just 0
     top_k_scores = torch.zeros(k, 1).to(device)  # (k, 1)
@@ -139,18 +142,15 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
         if step > 50:
             break
         step += 1
-    if not complete_seqs_scores:
-        seq = []
-        alphas = []
-    else:
-        i = complete_seqs_scores.index(max(complete_seqs_scores))
-        seq = complete_seqs[i]
-        alphas = complete_seqs_alpha[i]
+
+    i = complete_seqs_scores.index(max(complete_seqs_scores))
+    seq = complete_seqs[i]
+    alphas = complete_seqs_alpha[i]
 
     return seq, alphas
 
 
-def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
+def visualize_att(image_path, seq, alphas, rev_word_map, fname, smooth=True):
     """
     Visualizes caption with weights at every word.
 
@@ -166,11 +166,7 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
     image = image.resize([14 * 24, 14 * 24], Image.LANCZOS)
 
     words = [rev_word_map[ind] for ind in seq]
-    #for test data
-    if words is []:
-        words = ['<start>', '<end>']
-    if alphas is []:
-        alphas = torch.from_numpy(np.zeros((2,14,14)))
+
     #added to make plots bigger
     plt.rcParams['figure.figsize'] = [10, 10]
     plt.rcParams['figure.dpi'] = 100
@@ -191,10 +187,12 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
         else:
             plt.imshow(alpha, alpha=0.8)
         plt.set_cmap(cm.Greys_r)
+#         plt.set_cmap(cm.seismic)
         plt.axis('off')
-    plt.show()
+#     plt.show()
     #save image here
-    plt.savefig('attention.jpg')
+    plt.savefig(fname, facecolor='white')
+    plt.close()
 
 
 if __name__ == '__main__':
@@ -209,7 +207,7 @@ if __name__ == '__main__':
 #     args = parser.parse_args()
     root = '../'
     f = open(root+'config/caption.json')
-    jsonread = json.load(f) 
+    jsonread = json.load(f)
 
     # Load model
     checkpoint = torch.load(root+jsonread['model_fp'], map_location=str(device))
