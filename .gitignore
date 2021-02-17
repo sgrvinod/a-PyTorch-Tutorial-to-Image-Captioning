@@ -128,7 +128,12 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+attention.jpg
 src/data/raw/*
 src/data/out/*
 src/checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar
 src/BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar
+test/testdata/out_images/*
+test/models/*
+!test/models/models.txt
+!test/testdata/out_images/out_images.txt

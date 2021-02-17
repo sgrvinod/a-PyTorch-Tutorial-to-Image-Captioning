@@ -1,0 +1,9 @@
+{
+    "dataset": "coco",
+    "karpathy_json_path": "test/testdata/splits/coco_dataset_test.json",
+    "image_folder": "test/testdata",
+    "captions_per_image":5,
+    "min_word_freq":5,
+    "output_folder":"test/testdata/out_images",
+    "max_len":50
+}

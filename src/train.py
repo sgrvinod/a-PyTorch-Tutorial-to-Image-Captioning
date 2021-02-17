@@ -50,13 +50,19 @@ checkpoint = root+jsonread['checkpoint']  # path to checkpoint, None if none
 
 #TODO implement code to try to load checkpoint if fails then start from beginning
 
-def main():
+def main(test=False):
     """
     Training and validation.
     """
-
     global best_bleu4, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map
-
+    if test:
+        f = open('config/train_test.json')
+        jsonread = json.load(f) 
+        data_folder = jsonread['data_folder']  # folder with data files saved by create_input_files.py
+        data_name = jsonread['data_name']
+        checkpoint = jsonread['checkpoint']
+        epochs = 1
+    
     # Read word map
     word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
     with open(word_map_file, 'r') as j:
@@ -144,7 +150,7 @@ def main():
 
         # Save checkpoint
         save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
-                        decoder_optimizer, recent_bleu4, is_best)
+                        decoder_optimizer, recent_bleu4, is_best, test)
 
 
 def train(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
