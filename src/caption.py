@@ -193,6 +193,7 @@ def visualize_att(image_path, seq, alphas, rev_word_map, fname, smooth=True):
     #save image here
     plt.savefig(fname, facecolor='white')
     plt.close()
+    return 
 
 
 if __name__ == '__main__':
