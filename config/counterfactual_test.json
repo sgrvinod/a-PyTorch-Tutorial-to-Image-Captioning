@@ -1,0 +1,8 @@
+{
+  "data_dir":"test/testdata/images",
+  "temp_dir":"data/temp/test_imgs",
+  "out_dir":"data/out/test_imgs",
+  "annotation_fp":"test/testdata/annotations/instances_test.json",
+  "checkpoint_dir":"models/full_model_coco2017_v2",
+  "model_id":"11fD6YYG4kL1WT_a27LSOl5tOZOsg7TOM"
+}
