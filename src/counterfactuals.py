@@ -21,8 +21,18 @@ from pycocotools.coco import COCO
 def dir_creator(dir_name):
     try:
         os.chdir(dir_name)
-        os.chdir('..')
-    except FileNotFoundError: os.mkdir(dir_name)
+        for _ in dir_name.split('/'):
+            os.chdir('..')
+    except FileNotFoundError:
+        if len(dir_name.split('/')) > 1:
+            tot_dir = ''
+            for dir in dir_name.split('/'):
+                tot_dir += dir
+                try:os.mkdir(tot_dir)
+                except FileExistsError:pass
+                tot_dir += '/'
+        else:
+            os.mkdir(dir_name)
 
 def download_gen_inpaint_model(file_id, model_dir):
     # file_id = '11fD6YYG4kL1WT_a27LSOl5tOZOsg7TOM'
@@ -60,16 +70,24 @@ def create_mask_input(data_dir, temp_dir, out_dir, annotation_fp, input=False):
             mask = coco.annToMask(ann) * 255
 
             img_dir = str(img_id)
-            try:
-                print('current directory:',os.getcwd())
+            #try:
+            #    print('current directory:',os.getcwd())
 
-                os.chdir(f'{temp_dir}/{img_dir}')
-                os.chdir('../../../../')
-            except FileNotFoundError:
-                print('current directory:',os.getcwd())
-                os.mkdir(f'{temp_dir}/{img_dir}')
-                os.mkdir(f'{out_dir}/{img_dir}')
-                print(f'{temp_dir}/{img_dir} directory created')
+            #    os.chdir(f'{temp_dir}/{img_dir}')
+            #    os.chdir('../../../../')
+            #except FileNotFoundError:
+            #    print('current directory:',os.getcwd())
+            #    #if os.path.exists(f'{temp_dir}')==False: #or os.path.exists(f'{out_dir}')==False:
+            #    #    dir_tot = ''
+            #    #    for dir in f'{temp_dir}'.split('/'):
+            #    #        dir_tot += dir
+            #    #        os.mkdir(dir_tot)
+            #    #        dir_tot += '/'
+            #    #    #for dir in f'{out_dir}'.split('/'):
+            #    #    #    os.mkdir(dir
+            dir_creator(f'{temp_dir}/{img_dir}')
+            # os.mkdir(f'{out_dir}/{img_dir}')
+            print(f'{temp_dir}/{img_dir} directory created')
 
             print('current directory:',os.getcwd())
 
@@ -150,6 +168,7 @@ def generate_counterfactual(image_fp, mask_fp, output_fp, checkpoint_dir, model_
 
 
 def generate_counterfactuals(data_dir, checkpoint_dir, model_id=None):
+    dir_creator(checkpoint_dir.split('/')[0]) # create models directory if it doesn't already exist
     try:
         os.chdir(checkpoint_dir)
         print(f'Model exists at {checkpoint_dir}')
