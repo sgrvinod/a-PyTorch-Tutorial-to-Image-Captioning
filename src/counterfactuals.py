@@ -13,26 +13,27 @@ import time
 import neuralgym as ng
 sys.path.insert(0, 'src/')
 from download import *
+from helper import dir_creator
 from inpaint_model import InpaintCAModel
 print(os.getcwd())
 sys.path.insert(0, 'src/data/cocoapi/PythonAPI/')
 from pycocotools.coco import COCO
 
-def dir_creator(dir_name):
-    try:
-        os.chdir(dir_name)
-        for _ in dir_name.split('/'):
-            os.chdir('..')
-    except FileNotFoundError:
-        if len(dir_name.split('/')) > 1:
-            tot_dir = ''
-            for dir in dir_name.split('/'):
-                tot_dir += dir
-                try:os.mkdir(tot_dir)
-                except FileExistsError:pass
-                tot_dir += '/'
-        else:
-            os.mkdir(dir_name)
+# def dir_creator(dir_name):
+#     try:
+#         os.chdir(dir_name)
+#         for _ in dir_name.split('/'):
+#             os.chdir('..')
+#     except FileNotFoundError:
+#         if len(dir_name.split('/')) > 1:
+#             tot_dir = ''
+#             for dir in dir_name.split('/'):
+#                 tot_dir += dir
+#                 try:os.mkdir(tot_dir)
+#                 except FileExistsError:pass
+#                 tot_dir += '/'
+#         else:
+#             os.mkdir(dir_name)
 
 def download_gen_inpaint_model(file_id, model_dir):
     # file_id = '11fD6YYG4kL1WT_a27LSOl5tOZOsg7TOM'

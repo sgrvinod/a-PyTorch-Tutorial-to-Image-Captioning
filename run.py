@@ -6,6 +6,7 @@ import sys
 # from src.eval import evaluate
 # from src.caption import caption_image_beam_search, visualize_att
 from src.counterfactuals import create_mask_input, generate_counterfactuals
+from src.img_caption_explainer import ImageCaptionExplainer
 
 def data(test=False):
     root = ''
@@ -74,15 +75,41 @@ def counterfactual_production(test=False, year=None):
 
     with open(fname, 'r') as f:
         jsonread = json.load(f)
-    data_dir = jsonread['data_dir']
+    img_dir = jsonread['img_dir']
     temp_dir = jsonread['temp_dir']
     out_dir = jsonread['out_dir']
     annotation_fp = jsonread['annotation_fp']
     checkpoint_dir = jsonread['checkpoint_dir']
     model_id = jsonread['model_id']
 
-    create_mask_input(data_dir, temp_dir, out_dir, annotation_fp, False)
+    create_mask_input(img_dir, temp_dir, out_dir, annotation_fp, False)
     generate_counterfactuals(temp_dir, checkpoint_dir, model_id)
+
+def explain_model(test=False):
+    if test:
+        fname = 'config/counterfactual_test.json'
+    else:
+        fname = 'config/counterfactual.json'
+
+    with open(fname, 'r') as f:
+        jsonread=json.load(f)
+
+    temp_dir=jsonread['temp_dir']
+    out_dir=jsonread['out_dir']
+    model_fp=jsonread['model_fp']
+    wordmap_fp=jsonread['wordmap_fp']
+    coco_fp=jsonread['annotation_fp']
+    beam_size=jsonread['beam_size']
+    caption_model_id=jsonread['caption_model_id']
+    wordmap_id = jsonread['wordmap_id']
+
+    img_caption = ImageCaptionExplainer(img_dir=temp_dir, out_dir=out_dir, \
+    model_fp=model_fp, wordmap_fp=wordmap_fp, coco_fp=coco_fp, beam_size=beam_size,\
+    caption_model_id=caption_model_id, wordmap_id=wordmap_id)
+
+    for img_id in img_caption.ids:
+        img_caption.explain_image(img_id)
+
 
 def all():
     data()
@@ -98,6 +125,7 @@ def test():
     # train(True)
     # evaluate_model(True)
     counterfactual_production(test=True)
+    explain_model(test=True)
     # generate_viz(True)
 
 if __name__ == '__main__':
