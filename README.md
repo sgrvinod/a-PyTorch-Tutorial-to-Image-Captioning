@@ -200,7 +200,7 @@ We will need three inputs.
 
 Since we're using a pretrained Encoder, we would need to process the images into the form this pretrained Encoder is accustomed to.
 
-Pretrained ImageNet models available as part of PyTorch's `torchvision` module. [This page](https://pytorch.org/docs/master/torchvision/models.html) details the preprocessing or transformation we need to perform – pixel values must be in the range [0,1] and we must then normalize the image by the mean and standard deviation of the ImageNet images' RGB channels.
+Pretrained ImageNet models available as part of PyTorch's `torchvision` module. [This page](https://pytorch.org/vision/stable/models.html) details the preprocessing or transformation we need to perform – pixel values must be in the range [0,1] and we must then normalize the image by the mean and standard deviation of the ImageNet images' RGB channels.
 
 ```python
 mean = [0.485, 0.456, 0.406]
