@@ -1,0 +1,3 @@
+[submodule "augmentation"]
+	path = augmentation
+	url = https://github.com/aliciaviernes/image-captioning-augmentation.git

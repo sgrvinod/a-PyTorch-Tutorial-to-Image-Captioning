@@ -3,10 +3,91 @@ import numpy as np
 import h5py
 import json
 import torch
-from scipy.misc import imread, imresize
+import cv2  # aliciaviernes modification
+from matplotlib.pyplot import imread  # aliciaviernes modification
 from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
+from augmentation.main import tokenize
+
+
+def read_vizwiz(main_path='/home/aanagnostopoulou/DATA/vizwiz/', max_len=50):
+
+    # read annotations
+    with open(f'{main_path}annotations/train.json', 'r') as j:
+        train_data = json.load(j)
+    with open(f'{main_path}annotations/val.json', 'r') as j:
+        val_data = json.load(j)
+    
+    # Image and annotation items
+    # VizWiz val becomes VizWiz test
+    # Part of train set will be val
+    train_images = train_data['images']
+    train_annotations = train_data['annotations']
+    test_images = val_data['images']
+    test_annotations = val_data['annotations']
+
+    # Read image paths & captions for each image
+    # There is no validation split.
+    train_image_paths, test_image_paths = list(), list()
+    train_image_ids, test_image_ids = list(), list()
+    train_image_captions, test_image_captions = dict(), dict()
+    word_freq = Counter()
+
+    # read image paths
+    for image in train_images:
+        imagepath = f"{main_path}train/{image['file_name']}"
+        train_image_paths.append(imagepath)
+        train_image_ids.append(image['id'])
+    
+    for image in test_images:
+        imagepath = f"{main_path}val/{image['file_name']}"
+        test_image_paths.append(imagepath)
+        test_image_ids.append(image['id'])
+    
+    # read captions
+    for item in train_annotations:
+        imgid = item['image_id']
+        caption_tokens = tokenize(item['caption'])
+        word_freq.update(caption_tokens)
+        if imgid not in train_image_captions:
+            train_image_captions[imgid] = list()
+        if len(caption_tokens) <= max_len:
+            train_image_captions[imgid].append(caption_tokens)
+    
+    for item in test_annotations:
+        imgid = item['image_id']
+        caption_tokens = tokenize(item['caption'])
+        word_freq.update(caption_tokens)
+        if imgid not in test_image_captions:
+            test_image_captions[imgid] = list()
+        if len(caption_tokens) <= max_len:
+            test_image_captions[imgid].append(caption_tokens)
+
+    train_captions, test_captions = list(), list()
+    for i in train_image_ids:
+        train_captions.append(train_image_captions[i])
+    for i in test_image_ids:
+        test_captions.append(test_image_captions[i])
+    
+    val_image_paths = train_image_paths[-3875:]
+    val_captions = train_captions[-3875:]
+    train_image_paths = train_image_paths[:-3875]
+    train_captions = train_captions[:-3875]
+
+    assert len(train_image_paths) == len(train_captions)
+    assert len(val_image_paths) == len(val_captions)
+    assert len(test_image_paths) == len(test_captions)
+
+    return word_freq, train_image_paths, val_image_paths, test_image_paths, train_captions, val_captions, test_captions
+
+
+def ensure_five(imcaps, captions_per_image=5):
+    if len(imcaps) < captions_per_image:
+        captions = imcaps + [choice(imcaps) for _ in range(captions_per_image - len(imcaps))]
+    else:
+        captions = sample(imcaps, k=captions_per_image)  # NOTE sampling captions after all
+    return captions
 
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
@@ -23,49 +104,54 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
     :param max_len: don't sample captions longer than this length
     """
 
-    assert dataset in {'coco', 'flickr8k', 'flickr30k'}
+    if dataset == 'vizwiz':
+        word_freq, train_image_paths, val_image_paths, \
+        test_image_paths, train_image_captions, \
+        val_image_captions, test_image_captions = read_vizwiz(image_folder)
+    else: 
+        assert dataset in {'coco', 'flickr8k', 'flickr30k'}
 
-    # Read Karpathy JSON
-    with open(karpathy_json_path, 'r') as j:
-        data = json.load(j)
+        # Read Karpathy JSON
+        with open(karpathy_json_path, 'r') as j:
+            data = json.load(j)
 
-    # Read image paths and captions for each image
-    train_image_paths = []
-    train_image_captions = []
-    val_image_paths = []
-    val_image_captions = []
-    test_image_paths = []
-    test_image_captions = []
-    word_freq = Counter()
+        # Read image paths and captions for each image
+        train_image_paths = []
+        train_image_captions = []
+        val_image_paths = []
+        val_image_captions = []
+        test_image_paths = []
+        test_image_captions = []
+        word_freq = Counter()
 
-    for img in data['images']:
-        captions = []
-        for c in img['sentences']:
-            # Update word frequency
-            word_freq.update(c['tokens'])
-            if len(c['tokens']) <= max_len:
-                captions.append(c['tokens'])
+        for img in data['images']:
+            captions = []
+            for c in img['sentences']:
+                # Update word frequency
+                word_freq.update(c['tokens'])
+                if len(c['tokens']) <= max_len:
+                    captions.append(c['tokens'])
 
-        if len(captions) == 0:
-            continue
+            if len(captions) == 0:
+                continue
 
-        path = os.path.join(image_folder, img['filepath'], img['filename']) if dataset == 'coco' else os.path.join(
-            image_folder, img['filename'])
+            path = os.path.join(image_folder, img['filepath'], img['filename']) if dataset == 'coco' else os.path.join(
+                image_folder, img['filename'])
 
-        if img['split'] in {'train', 'restval'}:
-            train_image_paths.append(path)
-            train_image_captions.append(captions)
-        elif img['split'] in {'val'}:
-            val_image_paths.append(path)
-            val_image_captions.append(captions)
-        elif img['split'] in {'test'}:
-            test_image_paths.append(path)
-            test_image_captions.append(captions)
+            if img['split'] in {'train', 'restval'}:
+                train_image_paths.append(path)
+                train_image_captions.append(captions)
+            elif img['split'] in {'val'}:
+                val_image_paths.append(path)
+                val_image_captions.append(captions)
+            elif img['split'] in {'test'}:
+                test_image_paths.append(path)
+                test_image_captions.append(captions)
 
-    # Sanity check
-    assert len(train_image_paths) == len(train_image_captions)
-    assert len(val_image_paths) == len(val_image_captions)
-    assert len(test_image_paths) == len(test_image_captions)
+        # Sanity check
+        assert len(train_image_paths) == len(train_image_captions)
+        assert len(val_image_paths) == len(val_image_captions)
+        assert len(test_image_paths) == len(test_image_captions)
 
     # Create word map
     words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
@@ -103,10 +189,11 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
             for i, path in enumerate(tqdm(impaths)):
 
                 # Sample captions
-                if len(imcaps[i]) < captions_per_image:
-                    captions = imcaps[i] + [choice(imcaps[i]) for _ in range(captions_per_image - len(imcaps[i]))]
-                else:
-                    captions = sample(imcaps[i], k=captions_per_image)
+                captions = ensure_five(imcaps=imcaps[i], captions_per_image=captions_per_image)
+                # if len(imcaps[i]) < captions_per_image:
+                #     captions = imcaps[i] + [choice(imcaps[i]) for _ in range(captions_per_image - len(imcaps[i]))]
+                # else:
+                #     captions = sample(imcaps[i], k=captions_per_image)
 
                 # Sanity check
                 assert len(captions) == captions_per_image
@@ -116,7 +203,7 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
                 if len(img.shape) == 2:
                     img = img[:, :, np.newaxis]
                     img = np.concatenate([img, img, img], axis=2)
-                img = imresize(img, (256, 256))
+                img = cv2.resize(img, (256, 256))
                 img = img.transpose(2, 0, 1)
                 assert img.shape == (3, 256, 256)
                 assert np.max(img) <= 255

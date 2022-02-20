@@ -1,0 +1,4 @@
+*.tar
+*.zip
+*.pyc
+paths.py
