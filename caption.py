@@ -4,11 +4,14 @@ import numpy as np
 import json
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import imread  # alan03 modification
+import cv2  # alan03 modification
 import matplotlib.cm as cm
 import skimage.transform
 import argparse
-from scipy.misc import imread, imresize
 from PIL import Image
+
+from utils_old import detokenize, numberwithzeros, writeObserved
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -33,7 +36,7 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
     if len(img.shape) == 2:
         img = img[:, :, np.newaxis]
         img = np.concatenate([img, img, img], axis=2)
-    img = imresize(img, (256, 256))
+    img = cv2.resize(img, (256, 256))
     img = img.transpose(2, 0, 1)
     img = img / 255.
     img = torch.FloatTensor(img).to(device)
@@ -108,8 +111,8 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
         next_word_inds = top_k_words % vocab_size  # (s)
 
         # Add new words to sequences, alphas
-        seqs = torch.cat([seqs[prev_word_inds], next_word_inds.unsqueeze(1)], dim=1)  # (s, step+1)
-        seqs_alpha = torch.cat([seqs_alpha[prev_word_inds], alpha[prev_word_inds].unsqueeze(1)],
+        seqs = torch.cat([seqs[prev_word_inds.long()], next_word_inds.unsqueeze(1)], dim=1) # (s, step+1)  # (s, step+1)
+        seqs_alpha = torch.cat([seqs_alpha[prev_word_inds.long()], alpha[prev_word_inds.long()].unsqueeze(1)],
                                dim=1)  # (s, step+1, enc_image_size, enc_image_size)
 
         # Which sequences are incomplete (didn't reach <end>)?
@@ -129,9 +132,9 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
             break
         seqs = seqs[incomplete_inds]
         seqs_alpha = seqs_alpha[incomplete_inds]
-        h = h[prev_word_inds[incomplete_inds]]
-        c = c[prev_word_inds[incomplete_inds]]
-        encoder_out = encoder_out[prev_word_inds[incomplete_inds]]
+        h = h[prev_word_inds.long()[incomplete_inds]]
+        c = c[prev_word_inds.long()[incomplete_inds]]
+        encoder_out = encoder_out[prev_word_inds.long()[incomplete_inds]]
         top_k_scores = top_k_scores[incomplete_inds].unsqueeze(1)
         k_prev_words = next_word_inds[incomplete_inds].unsqueeze(1)
 
@@ -147,7 +150,7 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
     return seq, alphas
 
 
-def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
+def visualize_att(image_path, seq, alphas, rev_word_map, name, smooth=True):
     """
     Visualizes caption with weights at every word.
 
@@ -167,7 +170,7 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
     for t in range(len(words)):
         if t > 50:
             break
-        plt.subplot(np.ceil(len(words) / 5.), 5, t + 1)
+        plt.subplot(int(np.ceil(len(words) / 5.)), 5, t + 1)  # NOTE alicia viernes change
 
         plt.text(0, 1, '%s' % (words[t]), color='black', backgroundcolor='white', fontsize=12)
         plt.imshow(image)
@@ -183,6 +186,9 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
         plt.set_cmap(cm.Greys_r)
         plt.axis('off')
     plt.show()
+    if name:
+        plt.savefig(name)
+    return detokenize(words)
 
 
 if __name__ == '__main__':
@@ -216,3 +222,24 @@ if __name__ == '__main__':
 
     # Visualize caption and attention of best sequence
     visualize_att(args.img, seq, alphas, rev_word_map, args.smooth)
+
+"""
+    # alicia viernes modifications
+
+    captionlist = list()
+
+    for i in range(100):
+        i = numberwithzeros(i)
+        imgname = f'{mainpath2img}{i}.jpg'
+        resultname = f'viz/example_{i}.jpeg'
+        # Encode, decode with attention and beam search
+        seq, alphas = caption_image_beam_search(encoder, decoder, imgname, 
+                        word_map, args.beam_size)
+        alphas = torch.FloatTensor(alphas)
+
+        # Visualize caption and attention of best sequence
+        caption = visualize_att(imgname, seq, alphas, rev_word_map, smooth=args.smooth, name=resultname)
+        captionlist.append(caption)
+    
+    writeObserved(captions=captionlist, outname='sat_captions.txt')
+"""

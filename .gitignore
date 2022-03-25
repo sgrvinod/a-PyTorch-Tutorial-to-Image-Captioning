@@ -1,4 +1,10 @@
+**__pycache__**
+additions**
+*.csv
+*.ipynb
+*.pyc
 *.tar
 *.zip
-*.pyc
 paths.py
+viz**
+create_input_files.py

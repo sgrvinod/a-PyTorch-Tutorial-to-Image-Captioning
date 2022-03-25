@@ -1,14 +1,14 @@
 import os
 import numpy as np
 import h5py
-import json, csv, cv2
+import json
 import torch
-from matplotlib.pyplot import imread
+import cv2  # aliciaviernes modification
+from matplotlib.pyplot import imread  # aliciaviernes modification
 from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
-from augmentation.main import captions_augment, text_augmentation, tokenize  # aliciaviernes addition
-from augmentation.image_main import image_transform
+from augmentation.main import tokenize
 
 
 def read_vizwiz(main_path='/home/aanagnostopoulou/DATA/vizwiz/', max_len=50):
@@ -90,38 +90,8 @@ def ensure_five(imcaps, captions_per_image=5):
     return captions
 
 
-def image_preprocessing(img):
-    if len(img.shape) == 2:
-        img = img[:, :, np.newaxis]
-        img = np.concatenate([img, img, img], axis=2)
-    img = cv2.resize(img, (256, 256))  # aliciaviernes modification
-    img = img.transpose(2, 0, 1)
-
-    assert img.shape == (3, 256, 256)
-    assert np.max(img) <= 255
-
-    return img
-
-
-def caption_encoding(captions, word_map, max_len):
-    
-    enc_captions, caplens = list(), list()
-    for j, c in enumerate(captions):
-        # Encode captions
-        enc_c_a = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in c] + [
-                    word_map['<end>']] + [word_map['<pad>']] * (max_len - len(c))
-                    
-        # Find caption lengths
-        c_len_a = len(c) + 2
-
-        enc_captions.append(enc_c_a)
-        caplens.append(c_len_a)
-    
-    return enc_captions, caplens
-
-
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
-                       max_len=100, text_augment=True, img_augment=True, nr_augs=10):
+                       max_len=100):
     """
     Creates input files for training, validation, and test data.
 
@@ -146,9 +116,12 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
             data = json.load(j)
 
         # Read image paths and captions for each image
-        train_image_paths = []; train_image_captions = []
-        val_image_paths = []; val_image_captions = []
-        test_image_paths = []; test_image_captions = []
+        train_image_paths = []
+        train_image_captions = []
+        val_image_paths = []
+        val_image_captions = []
+        test_image_paths = []
+        test_image_captions = []
         word_freq = Counter()
 
         for img in data['images']:
@@ -167,7 +140,7 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
 
             if img['split'] in {'train', 'restval'}:
                 train_image_paths.append(path)
-                train_image_captions.append(captions)        
+                train_image_captions.append(captions)
             elif img['split'] in {'val'}:
                 val_image_paths.append(path)
                 val_image_captions.append(captions)
@@ -176,7 +149,7 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
                 test_image_captions.append(captions)
 
         # Sanity check
-        assert len(train_image_paths) == len(train_image_captions)  # 113287
+        assert len(train_image_paths) == len(train_image_captions)
         assert len(val_image_paths) == len(val_image_captions)
         assert len(test_image_paths) == len(test_image_captions)
 
@@ -195,68 +168,49 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
     with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + '.json'), 'w') as j:
         json.dump(word_map, j)
 
-    augmented_captions = list()  # what is that?
-
     # Sample captions for each image, save images to HDF5 file, and captions and their lengths to JSON files
     seed(123)
     for impaths, imcaps, split in [(train_image_paths, train_image_captions, 'TRAIN'),
                                    (val_image_paths, val_image_captions, 'VAL'),
-                                   (test_image_paths, test_image_captions, 'TEST')
-                                   ]:
+                                   (test_image_paths, test_image_captions, 'TEST')]:
 
         with h5py.File(os.path.join(output_folder, split + '_IMAGES_' + base_filename + '.hdf5'), 'a') as h:
             # Make a note of the number of captions we are sampling per image
-            if text_augment == True and img_augment == False:
-                h.attrs['captions_per_image'] = captions_per_image * nr_augs
-            else:
-                h.attrs['captions_per_image'] = captions_per_image # maybe change that in future
+            h.attrs['captions_per_image'] = captions_per_image
 
             # Create dataset inside HDF5 file to store images
-            if img_augment == False:
-                ref = False
-                images = h.create_dataset('images', (len(impaths), 3, 256, 256), dtype='uint8')
-            else:
-                ref = nr_augs + 1
-                images = h.create_dataset('images', (len(impaths * (ref)), 3, 256, 256), dtype='uint8')
+            images = h.create_dataset('images', (len(impaths), 3, 256, 256), dtype='uint8')
 
             print("\nReading %s images and captions, storing to file...\n" % split)
 
-            enc_captions, caplens = list(), list()
+            enc_captions = []
+            caplens = []
 
             for i, path in enumerate(tqdm(impaths)):
 
-                # NOTE //: aufrunden, %: abrunden
-
-                if ref:
-                    reflist = [i for i in range(i * ref, (i + 1) * ref)]
-                
                 # Sample captions
                 captions = ensure_five(imcaps=imcaps[i], captions_per_image=captions_per_image)
+                # if len(imcaps[i]) < captions_per_image:
+                #     captions = imcaps[i] + [choice(imcaps[i]) for _ in range(captions_per_image - len(imcaps[i]))]
+                # else:
+                #     captions = sample(imcaps[i], k=captions_per_image)
 
-                # Sanity check NOTE to remove potentially
+                # Sanity check
                 assert len(captions) == captions_per_image
-                
+
                 # Read images
                 img = imread(impaths[i])
-                img = image_preprocessing(img)
+                if len(img.shape) == 2:
+                    img = img[:, :, np.newaxis]
+                    img = np.concatenate([img, img, img], axis=2)
+                img = cv2.resize(img, (256, 256))
+                img = img.transpose(2, 0, 1)
+                assert img.shape == (3, 256, 256)
+                assert np.max(img) <= 255
 
-                # Image augmentation & Save image to HDF5 file
-                if split == 'TRAIN' and img_augment == True:
-                    images[reflist[0]] = img
-                    rest = reflist[1:]
-                    for j in range(len(rest)):  # NOTE image_augs_nr
-                        # NOTE take into consideration initial image transformation
-                        new_img = image_transform(impaths[i], save=False)
-                        new_img = image_preprocessing(new_img)
-                        images[rest[j]] = new_img
-                
-                else:
-                    images[i] = img
+                # Save image to HDF5 file
+                images[i] = img
 
-                # enc_captions, caplens = caption_encoding(captions, word_map, max_len)
-                # enc_captionsA, caplensA = caption_encoding(augmented_captions, word_map, max_len)
-                # enc_captions, caplens = list(), list()
-                
                 for j, c in enumerate(captions):
                     # Encode captions
                     enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in c] + [
@@ -265,28 +219,11 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
                     # Find caption lengths
                     c_len = len(c) + 2
 
-                    if text_augment == False and img_augment == True:
-                        for x in range(ref):
-                            enc_captions.append(enc_c)
-                            caplens.append(c_len)
-                    elif text_augment == False and img_augment == True:
-                        enc_captions.append(enc_c)
-                        caplens.append(c_len)
-                    # else:
-                        # pass
-
-            # NOTE preliminary augmentations
-            # with open(os.path.join(output_folder, 'augmentations.csv'), 'w') as csvfile:
-            #     writer = csv.writer(csvfile, delimiter= ' ')
-            #     for line in augmented_captions:
-            #         writer.writerow([line])
+                    enc_captions.append(enc_c)
+                    caplens.append(c_len)
 
             # Sanity check
-            # of course
             assert images.shape[0] * captions_per_image == len(enc_captions) == len(caplens)
-            # Append images.
-            # Encode captions.
-            # Append captions.
 
             # Save encoded captions and their lengths to JSON files
             with open(os.path.join(output_folder, split + '_CAPTIONS_' + base_filename + '.json'), 'w') as j:
@@ -294,13 +231,6 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
 
             with open(os.path.join(output_folder, split + '_CAPLENS_' + base_filename + '.json'), 'w') as j:
                 json.dump(caplens, j)
-            
-            # NOTE save augmented encoded capitons and their lengths
-            # with open(os.path.join(output_folder, split + '_AUG-CAPTIONS_' + base_filename + '.json'), 'w') as j:
-            #     json.dump(enc_captionsA, j)
-            
-            # with open(os.path.join(output_folder, split + '_AUG-CAPLENS_' + base_filename + '.json'), 'w') as j:
-            #     json.dump(caplensA, j)
 
 
 def init_embedding(embeddings):
@@ -442,26 +372,5 @@ def accuracy(scores, targets, k):
     correct_total = correct.view(-1).float().sum()  # 0D tensor
     return correct_total.item() * (100.0 / batch_size)
 
-### EXTRA FUNCTIONS FOR CAPTION.PY -- ALICIA VIERNES ###
-
-def detokenize(seq):
-    # seq = seq[1:-1]
-    return ' '.join(seq[1:-1])
 
 
-def numberwithzeros(n, zeros=3):
-    return f"{'0' * (zeros - len(str(n)))}{str(n)}"
-
-
-def writeObserved(captions, outname):
-    with open(outname, 'w') as f:
-        for caption in captions:
-            f.write(f'{caption}\n')
-
-# choose 100 pictures from VizWiz and run image captioning
-# from these 100, visualize 10.
-
-if __name__ == "__main__":
-    a, b, c, d, e, f, g = read_vizwiz()
-    print(len(b), len(c), len(d))
-    print(len(e), len(f), len(g))

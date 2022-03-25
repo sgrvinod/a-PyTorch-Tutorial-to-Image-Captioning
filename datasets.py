@@ -39,9 +39,9 @@ class CaptionDataset(Dataset):
         self.transform = transform
 
         # Total number of datapoints
-        self.dataset_size = len(self.captions)
+        self.dataset_size = len(self.captions)  # NOTE check again
 
-    def __getitem__(self, i):
+    def __getitem__(self, i):  # NOTE edo ine to zumaki
         # Remember, the Nth caption corresponds to the (N // captions_per_image)th image
         img = torch.FloatTensor(self.imgs[i // self.cpi] / 255.)
         if self.transform is not None:
