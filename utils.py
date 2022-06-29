@@ -1,308 +1,15 @@
-import os
 import numpy as np
-import h5py
-import json, csv, cv2
+import pickle
+import random
+import string
 import torch
-from matplotlib.pyplot import imread
-from tqdm import tqdm
-from collections import Counter
-from random import seed, choice, sample
-from augmentation.main import captions_augment, text_augmentation, tokenize  # aliciaviernes addition
-from augmentation.image_main import image_transform
+
+# from augmentation.main import captions_augment, text_augmentation
+# from augmentation.image_main import image_transform
 
 
-def read_vizwiz(main_path='/home/aanagnostopoulou/DATA/vizwiz/', max_len=50):
-
-    # read annotations
-    with open(f'{main_path}annotations/train.json', 'r') as j:
-        train_data = json.load(j)
-    with open(f'{main_path}annotations/val.json', 'r') as j:
-        val_data = json.load(j)
-    
-    # Image and annotation items
-    # VizWiz val becomes VizWiz test
-    # Part of train set will be val
-    train_images = train_data['images']
-    train_annotations = train_data['annotations']
-    test_images = val_data['images']
-    test_annotations = val_data['annotations']
-
-    # Read image paths & captions for each image
-    # There is no validation split.
-    train_image_paths, test_image_paths = list(), list()
-    train_image_ids, test_image_ids = list(), list()
-    train_image_captions, test_image_captions = dict(), dict()
-    word_freq = Counter()
-
-    # read image paths
-    for image in train_images:
-        imagepath = f"{main_path}train/{image['file_name']}"
-        train_image_paths.append(imagepath)
-        train_image_ids.append(image['id'])
-    
-    for image in test_images:
-        imagepath = f"{main_path}val/{image['file_name']}"
-        test_image_paths.append(imagepath)
-        test_image_ids.append(image['id'])
-    
-    # read captions
-    for item in train_annotations:
-        imgid = item['image_id']
-        caption_tokens = tokenize(item['caption'])
-        word_freq.update(caption_tokens)
-        if imgid not in train_image_captions:
-            train_image_captions[imgid] = list()
-        if len(caption_tokens) <= max_len:
-            train_image_captions[imgid].append(caption_tokens)
-    
-    for item in test_annotations:
-        imgid = item['image_id']
-        caption_tokens = tokenize(item['caption'])
-        word_freq.update(caption_tokens)
-        if imgid not in test_image_captions:
-            test_image_captions[imgid] = list()
-        if len(caption_tokens) <= max_len:
-            test_image_captions[imgid].append(caption_tokens)
-
-    train_captions, test_captions = list(), list()
-    for i in train_image_ids:
-        train_captions.append(train_image_captions[i])
-    for i in test_image_ids:
-        test_captions.append(test_image_captions[i])
-    
-    val_image_paths = train_image_paths[-3875:]
-    val_captions = train_captions[-3875:]
-    train_image_paths = train_image_paths[:-3875]
-    train_captions = train_captions[:-3875]
-
-    assert len(train_image_paths) == len(train_captions)
-    assert len(val_image_paths) == len(val_captions)
-    assert len(test_image_paths) == len(test_captions)
-
-    return word_freq, train_image_paths, val_image_paths, test_image_paths, train_captions, val_captions, test_captions
-
-
-def ensure_five(imcaps, captions_per_image=5):
-    if len(imcaps) < captions_per_image:
-        captions = imcaps + [choice(imcaps) for _ in range(captions_per_image - len(imcaps))]
-    else:
-        captions = sample(imcaps, k=captions_per_image)  # NOTE sampling captions after all
-    return captions
-
-
-def image_preprocessing(img):
-    if len(img.shape) == 2:
-        img = img[:, :, np.newaxis]
-        img = np.concatenate([img, img, img], axis=2)
-    img = cv2.resize(img, (256, 256))  # aliciaviernes modification
-    img = img.transpose(2, 0, 1)
-
-    assert img.shape == (3, 256, 256)
-    assert np.max(img) <= 255
-
-    return img
-
-
-def caption_encoding(captions, word_map, max_len):
-    
-    enc_captions, caplens = list(), list()
-    for j, c in enumerate(captions):
-        # Encode captions
-        enc_c_a = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in c] + [
-                    word_map['<end>']] + [word_map['<pad>']] * (max_len - len(c))
-                    
-        # Find caption lengths
-        c_len_a = len(c) + 2
-
-        enc_captions.append(enc_c_a)
-        caplens.append(c_len_a)
-    
-    return enc_captions, caplens
-
-
-def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
-                       max_len=100, text_augment=True, img_augment=True, nr_augs=10):
-    """
-    Creates input files for training, validation, and test data.
-
-    :param dataset: name of dataset, one of 'coco', 'flickr8k', 'flickr30k'
-    :param karpathy_json_path: path of Karpathy JSON file with splits and captions
-    :param image_folder: folder with downloaded images
-    :param captions_per_image: number of captions to sample per image
-    :param min_word_freq: words occuring less frequently than this threshold are binned as <unk>s
-    :param output_folder: folder to save files
-    :param max_len: don't sample captions longer than this length
-    """
-
-    if dataset == 'vizwiz':
-        word_freq, train_image_paths, val_image_paths, \
-        test_image_paths, train_image_captions, \
-        val_image_captions, test_image_captions = read_vizwiz(image_folder)
-    else: 
-        assert dataset in {'coco', 'flickr8k', 'flickr30k'}
-
-        # Read Karpathy JSON
-        with open(karpathy_json_path, 'r') as j:
-            data = json.load(j)
-
-        # Read image paths and captions for each image
-        train_image_paths = []; train_image_captions = []
-        val_image_paths = []; val_image_captions = []
-        test_image_paths = []; test_image_captions = []
-        word_freq = Counter()
-
-        for img in data['images']:
-            captions = []
-            for c in img['sentences']:
-                # Update word frequency
-                word_freq.update(c['tokens'])
-                if len(c['tokens']) <= max_len:
-                    captions.append(c['tokens'])
-
-            if len(captions) == 0:
-                continue
-
-            path = os.path.join(image_folder, img['filepath'], img['filename']) if dataset == 'coco' else os.path.join(
-                image_folder, img['filename'])
-
-            if img['split'] in {'train', 'restval'}:
-                train_image_paths.append(path)
-                train_image_captions.append(captions)        
-            elif img['split'] in {'val'}:
-                val_image_paths.append(path)
-                val_image_captions.append(captions)
-            elif img['split'] in {'test'}:
-                test_image_paths.append(path)
-                test_image_captions.append(captions)
-
-        # Sanity check
-        assert len(train_image_paths) == len(train_image_captions)  # 113287
-        assert len(val_image_paths) == len(val_image_captions)
-        assert len(test_image_paths) == len(test_image_captions)
-
-    # Create word map
-    words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
-    word_map = {k: v + 1 for v, k in enumerate(words)}
-    word_map['<unk>'] = len(word_map) + 1
-    word_map['<start>'] = len(word_map) + 1
-    word_map['<end>'] = len(word_map) + 1
-    word_map['<pad>'] = 0
-
-    # Create a base/root name for all output files
-    base_filename = dataset + '_' + str(captions_per_image) + '_cap_per_img_' + str(min_word_freq) + '_min_word_freq'
-
-    # Save word map to a JSON
-    with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + '.json'), 'w') as j:
-        json.dump(word_map, j)
-
-    augmented_captions = list()  # what is that?
-
-    # Sample captions for each image, save images to HDF5 file, and captions and their lengths to JSON files
-    seed(123)
-    for impaths, imcaps, split in [(train_image_paths, train_image_captions, 'TRAIN'),
-                                   (val_image_paths, val_image_captions, 'VAL'),
-                                   (test_image_paths, test_image_captions, 'TEST')
-                                   ]:
-
-        with h5py.File(os.path.join(output_folder, split + '_IMAGES_' + base_filename + '.hdf5'), 'a') as h:
-            # Make a note of the number of captions we are sampling per image
-            if text_augment == True and img_augment == False:
-                h.attrs['captions_per_image'] = captions_per_image * nr_augs
-            else:
-                h.attrs['captions_per_image'] = captions_per_image # maybe change that in future
-
-            # Create dataset inside HDF5 file to store images
-            if img_augment == False:
-                ref = False
-                images = h.create_dataset('images', (len(impaths), 3, 256, 256), dtype='uint8')
-            else:
-                ref = nr_augs + 1
-                images = h.create_dataset('images', (len(impaths * (ref)), 3, 256, 256), dtype='uint8')
-
-            print("\nReading %s images and captions, storing to file...\n" % split)
-
-            enc_captions, caplens = list(), list()
-
-            for i, path in enumerate(tqdm(impaths)):
-
-                # NOTE //: aufrunden, %: abrunden
-
-                if ref:
-                    reflist = [i for i in range(i * ref, (i + 1) * ref)]
-                
-                # Sample captions
-                captions = ensure_five(imcaps=imcaps[i], captions_per_image=captions_per_image)
-
-                # Sanity check NOTE to remove potentially
-                assert len(captions) == captions_per_image
-                
-                # Read images
-                img = imread(impaths[i])
-                img = image_preprocessing(img)
-
-                # Image augmentation & Save image to HDF5 file
-                if split == 'TRAIN' and img_augment == True:
-                    images[reflist[0]] = img
-                    rest = reflist[1:]
-                    for j in range(len(rest)):  # NOTE image_augs_nr
-                        # NOTE take into consideration initial image transformation
-                        new_img = image_transform(impaths[i], save=False)
-                        new_img = image_preprocessing(new_img)
-                        images[rest[j]] = new_img
-                
-                else:
-                    images[i] = img
-
-                # enc_captions, caplens = caption_encoding(captions, word_map, max_len)
-                # enc_captionsA, caplensA = caption_encoding(augmented_captions, word_map, max_len)
-                # enc_captions, caplens = list(), list()
-                
-                for j, c in enumerate(captions):
-                    # Encode captions
-                    enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in c] + [
-                        word_map['<end>']] + [word_map['<pad>']] * (max_len - len(c))
-
-                    # Find caption lengths
-                    c_len = len(c) + 2
-
-                    if text_augment == False and img_augment == True:
-                        for x in range(ref):
-                            enc_captions.append(enc_c)
-                            caplens.append(c_len)
-                    elif text_augment == False and img_augment == True:
-                        enc_captions.append(enc_c)
-                        caplens.append(c_len)
-                    # else:
-                        # pass
-
-            # NOTE preliminary augmentations
-            # with open(os.path.join(output_folder, 'augmentations.csv'), 'w') as csvfile:
-            #     writer = csv.writer(csvfile, delimiter= ' ')
-            #     for line in augmented_captions:
-            #         writer.writerow([line])
-
-            # Sanity check
-            # of course
-            assert images.shape[0] * captions_per_image == len(enc_captions) == len(caplens)
-            # Append images.
-            # Encode captions.
-            # Append captions.
-
-            # Save encoded captions and their lengths to JSON files
-            with open(os.path.join(output_folder, split + '_CAPTIONS_' + base_filename + '.json'), 'w') as j:
-                json.dump(enc_captions, j)
-
-            with open(os.path.join(output_folder, split + '_CAPLENS_' + base_filename + '.json'), 'w') as j:
-                json.dump(caplens, j)
-            
-            # NOTE save augmented encoded capitons and their lengths
-            # with open(os.path.join(output_folder, split + '_AUG-CAPTIONS_' + base_filename + '.json'), 'w') as j:
-            #     json.dump(enc_captionsA, j)
-            
-            # with open(os.path.join(output_folder, split + '_AUG-CAPLENS_' + base_filename + '.json'), 'w') as j:
-            #     json.dump(caplensA, j)
-
-
+#### FOR THE MODEL #####
+  
 def init_embedding(embeddings):
     """
     Fills embedding tensor with values from the uniform distribution.
@@ -362,8 +69,9 @@ def clip_gradient(optimizer, grad_clip):
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
 
-def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer, decoder_optimizer,
-                    bleu4, is_best):
+def save_checkpoint(data_name, epoch, epochs_since_improvement, \
+    encoder, decoder, encoder_optimizer, decoder_optimizer,\
+        bleu4, is_best, memory=None):
     """
     Saves model checkpoint.
 
@@ -389,6 +97,10 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
     # If this checkpoint is the best so far, store a copy so it doesn't get overwritten by a worse checkpoint
     if is_best:
         torch.save(state, 'BEST_' + filename)
+    
+    if memory is not None:
+        with open(f'checkpoint_{data_name}.pkl', 'wb') as f:
+            pickle.dump(memory, f)
 
 
 class AverageMeter(object):
@@ -442,7 +154,8 @@ def accuracy(scores, targets, k):
     correct_total = correct.view(-1).float().sum()  # 0D tensor
     return correct_total.item() * (100.0 / batch_size)
 
-### EXTRA FUNCTIONS FOR CAPTION.PY -- ALICIA VIERNES ###
+
+# EXTRA FUNCTIONS FOR CAPTION.PY -- ALICIA VIERNES #
 
 def detokenize(seq):
     # seq = seq[1:-1]
@@ -461,7 +174,12 @@ def writeObserved(captions, outname):
 # choose 100 pictures from VizWiz and run image captioning
 # from these 100, visualize 10.
 
+def get_random_string(length):
+    # With combination of lower and upper case
+    result_str = ''.join(random.choice(string.ascii_letters) for i in range(length))
+    # print random string
+    print(result_str)
+
+
 if __name__ == "__main__":
-    a, b, c, d, e, f, g = read_vizwiz()
-    print(len(b), len(c), len(d))
-    print(len(e), len(f), len(g))
+    pass

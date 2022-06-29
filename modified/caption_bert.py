@@ -1,7 +1,3 @@
-import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as transforms
@@ -9,21 +5,23 @@ import torchvision.transforms as transforms
 import argparse
 import csv
 import cv2
-# import config as C
+import config as C
 import json
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import imread 
 import numpy as np
+from transformers import BertTokenizer
+from os import walk
 from PIL import Image
 import skimage.transform
-from tqdm import tqdm
+import tqdm
+
+tokenizer = BertTokenizer.from_pretrained('./bert-base-uncased')
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=3):
+def caption_image_beam_search(encoder, decoder, image_path, beam_size=3):
     """
     Reads an image and captions it with beam search.
 
@@ -36,7 +34,7 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
     """
 
     k = beam_size
-    vocab_size = len(word_map)
+    vocab_size = C.vocab_size
 
     # Read image and process
     img = imread(image_path)
@@ -66,7 +64,7 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
     encoder_out = encoder_out.expand(k, num_pixels, encoder_dim)  # (k, num_pixels, encoder_dim)
 
     # Tensor to store top k previous words at each step; now they're just <start>
-    k_prev_words = torch.LongTensor([[word_map['<start>']]] * k).to(device)  # (k, 1)
+    k_prev_words = torch.LongTensor([[101]] * k).to(device)  # (k, 1)
 
     # Tensor to store top k sequences; now they're just <start>
     seqs = k_prev_words  # (k, 1)
@@ -124,7 +122,7 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
 
         # Which sequences are incomplete (didn't reach <end>)?
         incomplete_inds = [ind for ind, next_word in enumerate(next_word_inds) if
-                           next_word != word_map['<end>']]
+                           next_word != 102]
         complete_inds = list(set(range(len(next_word_inds))) - set(incomplete_inds))
 
         # Set aside complete sequences
@@ -195,17 +193,14 @@ def visualize_att(image_path, seq, alphas, rev_word_map, name, smooth=True):
     plt.show()
     if name:
         plt.savefig(name)
-    return ' '.join(words)
+    return detokenize(words)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Show, Attend, and Tell - Tutorial - Generate Caption')
 
-    parser.add_argument('--img_folder', '-f', help='path to image folder')
-    parser.add_argument('--ids', '-i', help='path to IDs of VAL set')
+    parser.add_argument('--img', '-i', help='path to image')
     parser.add_argument('--model', '-m', help='path to model')
-    parser.add_argument('--word_map', '-wm', help='path to word map JSON')
-    parser.add_argument('--outfile', '-o', help='csv output file for captions')
     parser.add_argument('--beam_size', '-b', default=5, type=int, help='beam size for beam search')
     parser.add_argument('--dont_smooth', dest='smooth', action='store_false', help='do not smooth alpha overlay')
 
@@ -220,35 +215,23 @@ if __name__ == '__main__':
     encoder = encoder.to(device)
     encoder.eval()
 
-    # Load word map (word2ix)
-    with open(args.word_map, 'r') as j:
-        word_map = json.load(j)
-    rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
-
-    ids = set(np.load(args.ids))
 
     # Encode, decode with attention and beam search
-    # own VAL set: part of train set
-    img_paths = os.listdir(args.img_folder)
-    new_paths = list()
-    for path in img_paths:
-        id_nr = int(path.replace('VizWiz_train_', '').replace('.jpg', ''))
-        if id_nr in ids:
-            new_paths.append(args.img_folder + path)
-
+    filenames = next(walk(args.img), (None, None, []))[2]
     data = list()
-    for i in tqdm(range(len(new_paths))):
-        seq, alphas = caption_image_beam_search(encoder, decoder, new_paths[i], 
-                                                word_map, args.beam_size)
+    for f in filenames:
+        seq, alphas = caption_image_beam_search(encoder, decoder, args.img + f, args.beam_size)
         alphas = torch.FloatTensor(alphas)
 
         # Visualize caption and attention of best sequence
         # visualize_att(args.img, seq, alphas, rev_word_map, args.smooth)
-        words = [rev_word_map[ind] for ind in seq]
-        words = [w for w in words if w not in {'<start>', '<end>'}]
-        data.append([new_paths[i], ' '.join(words)])
+        # words = [rev_word_map[ind] for ind in seq]
+        words = tokenizer.convert_ids_to_tokens(words)
+        # words = [w for w in words if w not in {'<start>', '<end>'}]
+        # print(f, ' '.join(words))
+        data.extend((f, ' '.join(words)))
     
-    with open(args.outfile, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
-        for row in data:
-            writer.writerow([row])
+    # with open('captions_vizwiz_model_vizwiz_bert.csv', 'w', newline='') as csvfile:
+    #     writer = csv.writer(csvfile, delimiter='\t')
+    #     for row in data:
+    #         writer.writerow(row)

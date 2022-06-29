@@ -1,5 +1,7 @@
 import torch
 from torch import nn
+import numpy as np
+import random
 import torchvision
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,6 +49,52 @@ class Encoder(nn.Module):
             p.requires_grad = False
         # If fine-tuning, only fine-tune convolutional blocks 2 through 4
         for c in list(self.resnet.children())[5:]:
+            for p in c.parameters():
+                p.requires_grad = fine_tune
+
+
+class EncoderX(nn.Module):
+    """
+    Encoder with ResNext instead of ResNet.
+    """
+
+    def __init__(self, encoded_image_size=14):
+        super(EncoderX, self).__init__()
+        self.enc_image_size = encoded_image_size
+
+        resnext = torchvision.models.resnext101_32x8d(pretrained=True)
+
+        # Remove linear and pool layers (since we're not doing classification)
+        modules = list(resnext.children())[:-2]
+        self.resnext = nn.Sequential(*modules)
+
+        # Resize image to fixed size to allow input images of variable size
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
+
+        self.fine_tune()
+
+    def forward(self, images):
+        """
+        Forward propagation.
+
+        :param images: images, a tensor of dimensions (batch_size, 3, image_size, image_size)
+        :return: encoded images
+        """
+        out = self.resnext(images)  # (batch_size, 2048, image_size/32, image_size/32)
+        out = self.adaptive_pool(out)  # (batch_size, 2048, encoded_image_size, encoded_image_size)
+        out = out.permute(0, 2, 3, 1)  # (batch_size, encoded_image_size, encoded_image_size, 2048)
+        return out
+
+    def fine_tune(self, fine_tune=True):
+        """
+        Allow or prevent the computation of gradients for convolutional blocks 2 through 4 of the encoder.
+
+        :param fine_tune: Allow?
+        """
+        for p in self.resnext.parameters():
+            p.requires_grad = False
+        # If fine-tuning, only fine-tune convolutional blocks 2 through 4
+        for c in list(self.resnext.children())[5:]:
             for p in c.parameters():
                 p.requires_grad = fine_tune
 
@@ -212,3 +260,98 @@ class DecoderWithAttention(nn.Module):
             alphas[:batch_size_t, t, :] = alpha
 
         return predictions, encoded_captions, decode_lengths, alphas, sort_ind
+
+
+class ReplayMemory(object):
+    """
+        Create the empty memory buffer
+    """
+
+    def __init__(self, buffer=None):
+
+        if buffer is None:
+            self.memory = {}
+        else:
+            self.memory = buffer
+            total_keys = len(self.memory.keys())
+            total_keys = len(self.memory)
+            # convert the keys from np.bytes to np.float32
+            
+            # We don't know if this work yet
+            self.all_keys = torch.from_numpy(
+                np.frombuffer(
+                    np.asarray(list(self.memory.keys())), 
+                        dtype=np.float32).reshape(total_keys, 3, 256, 256))
+
+    def push(self, imgs, examples):
+        """
+        Add the examples as key-value pairs to the memory dictionary with content,attention_mask,label tuple as value
+        and key determined by key network
+        """
+        caps, caplens = examples
+        # types: torch.float32 | torch.int64 | torch.int64
+        # update the memory dictionary
+        for i, img in enumerate(imgs):
+            # numpy array cannot be used as key since it is non-hashable, 
+            # hence convert it to bytes to use as key
+            self.memory.update({img.detach().numpy().tobytes(): \
+                (caps[i].detach().numpy(), caplens[i].detach().numpy())})
+
+    def _prepare_batch(self, sample):
+        """
+        Parameter:
+        sample -> list of tuple of experiences
+               -> i.e, [(content_1,attn_mask_1,label_1),.....,(content_k,attn_mask_k,label_k)]
+        Returns:
+        batch -> tuple of list of content,attn_mask,label
+              -> i.e, ([content_1,...,content_k],[attn_mask_1,...,attn_mask_k],[label_1,...,label_k])
+        """
+        imgs = []
+        caps = []
+        caplens = []
+        # Iterate over experiences
+        for img, cap, caplen in sample:
+            # convert the batch elements into torch.LongTensor
+            imgs.append(img)
+            caps.append(cap)
+            caplens.append(caplen)
+
+        # return (torch.LongTensor(img), torch.LongTensor(caps), torch.LongTensor(caplens))
+        return (torch.FloatTensor(img), torch.LongTensor(caps), torch.LongTensor(caplens)) 
+
+    """
+    def get_neighbours(self, keys, k=32):
+        
+        # Returns samples from buffer using nearest neighbour approach
+        
+        samples = []
+        # Iterate over all the input keys
+        # to find neigbours for each of them
+        for key in keys:
+            # compute similarity scores based on Euclidean distance metric
+            similarity_scores = np.dot(self.all_keys, key.T)
+            K_neighbour_keys = self.all_keys[np.argpartition(
+                similarity_scores, -k)[-k:]]
+            neighbours = [self.memory[nkey.tobytes()]
+                          for nkey in K_neighbour_keys]
+            # converts experiences into batch
+            batch = self._prepare_batch(neighbours)
+            samples.append(batch)
+
+        return samples
+    """
+    
+    def sample(self, sample_size):
+
+        keys = random.sample(list(self.memory), sample_size)
+        imgs = np.array([np.frombuffer(np.asarray(k), \
+            dtype=np.float32).reshape(3, 256, 256) for k in keys], \
+                dtype=np.float32)
+        # imgs = np.array([k for k in keys], dtype=np.float32)
+        # imgs = [self.memory[k][0] for k in keys]
+        caps = np.array([self.memory[k][0] for k in keys], dtype=np.int64)
+        # caps = [self.memory[k][1] for k in keys]
+        caplens = np.array([self.memory[k][1] for k in keys], dtype=np.int64)
+        # caplens = [self.memory[k][2] for k in keys]
+
+        return (torch.from_numpy(imgs), torch.from_numpy(caps), torch.from_numpy(caplens))

@@ -1,10 +1,18 @@
 **__pycache__**
 additions**
+captions**
+checkpoints**
+results**
 *.csv
 *.ipynb
+*.json
+*.pkl
 *.pyc
 *.tar
 *.zip
 paths.py
-viz**
-create_input_files.py
+randomstring.py
+README_old.md
+traceback.txt
+# viz**
+# create_input_files.py
